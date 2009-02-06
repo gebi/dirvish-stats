@@ -1,0 +1,149 @@
+#!/usr/bin/python
+
+import os
+import sys
+import optparse
+import inspect
+import stat
+import bz2
+import gdbm
+from exceptions import *
+
+def die(msg, parser=None):
+    sys.stderr.write("Error: "+msg+"\n")
+    if parser:
+        parser.print_help()
+    sys.exit(1)
+
+def warn(msg):
+    sys.stderr.write("Error: "+msg+"\n")
+
+def pathjoin(a, *p):
+    path = a
+    for b in p:
+        if b.startswith('/'):
+            path += b
+        else:
+            path += '/' + b
+    return path
+
+def parse_log(fd):
+    fd.readline()
+    fd.readline()
+    fd.readline()
+    if not fd.readline().startswith('sending incremental file list'):
+        raise RuntimeError("wrong format of logfile: "+fd.name)
+    for i in fd:
+        if not i.startswith('\n'):
+            yield i.rstrip('\n')
+        else:
+            return
+
+class File(object):
+    def __init__(self, string):
+        stat = string.split()
+        self.inode = int(self.stat[0])
+
+def parse_index(fd):
+    for i in fd:
+        f = i.split(None,10)[10]
+        g = f.split(' -> ')     #filename
+        ret = ""
+        if len(g) == 1:
+            ret = g[0].rstrip()
+        elif len(g) <= 2:
+            ret = g[0]
+        else:
+            warn("unsupported filename containing \' -> \': \'"+f+"\'")
+            continue
+        ret = ret.replace('\\ ',' ')
+        if ret.find('\\') == -1:
+            yield ret
+        else:
+            warn("fucking charsets: "+ret)
+
+def parse_inode_from_index(fd):
+    for i in fd:
+        data = i.split(None,7)
+        #yield((data[0], data[6]))   # (inode, size)
+        yield(data[0])
+
+# ACTIONS
+def action_createX(args):
+    '''createX - create state of one rsync snapshot'''
+    dir = args[0]
+    filename = pathjoin(dir,'index.bz2')
+    tree = pathjoin(dir,'tree')
+    import bz2
+    file = bz2.BZ2File(filename)
+    gen = parse_index(file)
+    gen.next()
+    for file in gen:
+        path = pathjoin(tree,file)
+        #sys.stderr.write("tree= "+tree+'\n')
+        #sys.stderr.write("file= "+file+'\n')
+        #sys.stderr.write("path= "+path+"\n")
+        try:
+            s = os.lstat(path)
+        except os.error, e:
+            warn(str(e))
+            continue
+        num_links = s[stat.ST_NLINK]
+        print "%d;%s" %(num_links,file)
+        #return
+
+    #print 'fertig'
+    #file = args[0]
+    #for i in parse_log(open(file, 'r')):
+        #print i
+
+
+def action_create(args):
+    '''create - inode'''
+    db = gdbm.open('dbfile', 'cf')
+    import time
+    for dir in args:
+        print time.asctime(), " ->", dir
+        create_db(db, dir)
+    print time.asctime()
+    db.close()
+
+def create_db(db, dir):
+    filename = pathjoin(dir,'index.bz2')
+    file = bz2.BZ2File(filename)
+    for inode in parse_inode_from_index(file):
+        try:
+            refcnt = db[inode]
+            db[inode] = str(int(refcnt)+1)
+        except:
+            db[inode] = "1"
+
+
+# MAIN
+if __name__ == "__main__":
+    # actionname -> fun()
+    actions = {}
+    for k,v in globals().copy().iteritems():
+        prefix = 'action_'
+        if k.startswith(prefix):
+            if callable(v):
+                actions[k[len(prefix):]] = v
+    docstrings = [ '\t'+inspect.getdoc(i) for i in actions.itervalues() ]
+    docstrings.sort()
+    usage = "usage: %prog [options] <action> <config1> <config2>\n\n" +\
+            "%prog is a program which helps in kernel config handling\n\n" +\
+            "ACTIONS:\n" + '\n'.join(docstrings)
+    parser = optparse.OptionParser(usage)
+    (opts, args) = parser.parse_args()
+    if len(args) <1:
+        die("no argument given", parser)
+    cmd = args[0]
+    if cmd == "help":
+        parser.print_help()
+        sys.exit(0)
+    args = args[1:]
+    if cmd in actions:
+        actions[cmd](args)
+    else:
+        parser.error("no such action: " + cmd)
+
