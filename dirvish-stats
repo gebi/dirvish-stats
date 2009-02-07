@@ -92,7 +92,9 @@ def read_db_index(db_name):
 
 def write_db_index(db_name, db_set):
     fd = open(get_db_index_name(db_name),'w+')
-    for i in db_set:
+    l = list(db_set)
+    l.sort()
+    for i in l:
         fd.write(i+'\n')
     fd.close()
 
