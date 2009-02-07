@@ -35,12 +35,16 @@ def parse_index(fd):
         data = i.split(None,7)
         try:
             yield((data[0], data[2][:1], int(data[6])))   # (inode, type, size)
-        except:
+        except GeneratorExit:
+            pass
+        except Exception, e:
             braindead_find = False
             for type in ['c', 'b']:
                 if data[2].startswith(type):
                     braindead_find = True
             if not braindead_find:
+                import traceback
+                traceback.print_exc()
                 die("parsing %s:%d - \"%s\"" % (fd.name, line_num, " ".join(data)))
 
 
@@ -127,8 +131,8 @@ def create_db(db, dir):
             continue
         try:
             refcnt = int(db[inode])
+            db[inode] = str(refcnt+1)
             if refcnt != 0:
-                db[inode] = str(refcnt+1)
                 stat_size += size
             else:
                 stat_size_new += size
@@ -137,7 +141,7 @@ def create_db(db, dir):
             stat_size_new += size
     print_stat(dir, stat_size, stat_size_new)
 
-def action_remove(opts, args):
+def action_rm(opts, args):
     '''rm - remove directory from db-file'''
     db = gdbm.open(opts.dbfile, 'wf')
     db_index = read_db_index(opts.dbfile)
@@ -145,7 +149,7 @@ def action_remove(opts, args):
         if dir not in db_index:
             warn("%s not in db-index" %dir)
             continue
-        db_index.remove(db)
+        db_index.remove(dir)
         remove_from_db(db, dir)
     write_db_index(opts.dbfile, db_index)
     db.close()
@@ -163,13 +167,13 @@ def remove_from_db(db, dir):
             if refcnt > 0:
                 db[inode] = str(refcnt-1)
                 if refcnt == 1:
-                    stat_size_new -= size
+                    stat_size_new += size
                 else:
                     stat_size += size
             else:
-                die("wrong or corrupted db: "+os.path.abspath(opts.dbfile))
+                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt,inode,os.path.abspath(opts.dbfile)))
         except:
-            die("wrong or corrupted db: "+os.path.abspath(opts.dbfile))
+            die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
@@ -197,10 +201,10 @@ def create_stats(db, dir):
                 stat_size_new += size
                 continue
             elif refcnt == "0":
-                die("wrong or corrupted db: "+os.path.abspath(opts.dbfile))
+                die("wrong or corrupted db (refcnt=0;inode=%d): %s" %(inode,+os.path.abspath(opts.dbfile)))
             stat_size += size
         except:
-            die("wrong or corrupted db: "+os.path.abspath(opts.dbfile))
+            die("wrong or corrupted db (inode=%d): %s" %(inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
 
