@@ -34,7 +34,7 @@ def parse_index(fd):
         line_num += 1
         data = i.split(None,7)
         try:
-            yield((data[0], int(data[6])))   # (inode, size)
+            yield((data[0], data[2][:1], int(data[6])))   # (inode, type, size)
         except:
             braindead_find = False
             for type in ['c', 'b']:
@@ -91,7 +91,10 @@ def create_db(db, dir):
     file = multi_open(path_join(dir, 'index'))
     stat_size = 0
     stat_size_new = 0
-    for (inode, size) in parse_index(file):
+    for (inode, type, size) in parse_index(file):
+        if type == 'd':
+            stat_size_new += size
+            continue
         try:
             refcnt = int(db[inode])
             if refcnt != 0:
@@ -115,7 +118,10 @@ def create_stats(db, dir):
     file = multi_open(path_join(dir, 'index'))
     stat_size = 0
     stat_size_new = 0
-    for (inode, size) in parse_index(file):
+    for (inode, type, size) in parse_index(file):
+        if type == 'd':
+            stat_size_new += size
+            continue
         try:
             refcnt = db[inode]
             if refcnt == "1":
