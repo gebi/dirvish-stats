@@ -151,7 +151,7 @@ if __name__ == "__main__":
             "\tused diskspace from hardlinked dirvish backups\n\n" +\
             "ACTIONS:\n" + '\n'.join(docstrings)
     parser = optparse.OptionParser(usage)
-    parser.add_option("-f", "--file", dest="dbfile", default="default.gdbm",
+    parser.add_option("-d", "--dbfile", dest="dbfile", default="default.gdbm",
             metavar="FILE", help="Name of database file (%default)")
     (opts, args) = parser.parse_args()
     if len(args) <1:
