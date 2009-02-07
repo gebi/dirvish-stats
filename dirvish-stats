@@ -78,13 +78,41 @@ def multi_open(filename):
             if os.path.exists(file):
                 return fun(file)
 
+def get_db_index_name(db_name):
+    return db_name+'.i'
+
+def read_db_index(db_name):
+    s = set()
+    for line in open(get_db_index_name(db_name),'r'):
+        s.add(line.rstrip())
+    return s
+
+def write_db_index(db_name, db_set):
+    fd = open(get_db_index_name(db_name),'w+')
+    for i in db_set:
+        fd.write(i+'\n')
+    fd.close()
+
 
 # ACTIONS
-def action_create(opts, args):
-    '''create - initialise FILE of specified dirvish vaults'''
-    db = gdbm.open(opts.dbfile, 'cf')
+def action_init(opts, args):
+    '''init - initialise db-FILE of specified directories'''
+    add_to_db(opts, args, 'nf')     # always create a _new_ db
+
+def action_add(opts, args):
+    '''add - add directory(s) to db-FILE'''
+    add_to_db(opts, args, 'cf')     # open an existing db
+
+def add_to_db(opts, args, db_flags):
+    db = gdbm.open(opts.dbfile, db_flags)
+    db_index = read_db_index(opts.dbfile)
     for dir in args:
+        if dir in db_index:
+            warn("%s already in db %s" %(dir, os.path.abspath(opts.dbfile)))
+            continue
+        db_index.add(dir)
         create_db(db, dir)
+    write_db_index(opts.dbfile, db_index)
     db.close()
 
 def create_db(db, dir):
@@ -108,9 +136,13 @@ def create_db(db, dir):
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
-    '''stat - print statistics of given directories'''
+    '''stat - print statistics of given directories using db-FILE'''
     db = gdbm.open(opts.dbfile, 'rf')
+    db_index = read_db_index(opts.dbfile)
     for dir in args:
+        if dir not in db_index:
+            warn("%s not in db-index" %dir)
+            continue
         create_stats(db, dir)
     db.close()
 
@@ -147,12 +179,14 @@ if __name__ == "__main__":
     docstrings = [ '\t'+inspect.getdoc(i) for i in actions.itervalues() ]
     docstrings.sort()
     usage = "usage: %prog [options] <action> [DIR] [DIR] ...\n\n" +\
-            "%prog is a program which helps in determining\n" +\
+            "%prog is a program which helps determining\n" +\
             "\tused diskspace from hardlinked dirvish backups\n\n" +\
             "ACTIONS:\n" + '\n'.join(docstrings)
     parser = optparse.OptionParser(usage)
     parser.add_option("-d", "--dbfile", dest="dbfile", default="default.gdbm",
             metavar="FILE", help="Name of database file (%default)")
+    parser.add_option("-f", "--force", dest="force", action='store_true',
+            default=False, help="Do as i say!")
     (opts, args) = parser.parse_args()
     if len(args) <1:
         die("no argument given", parser)
