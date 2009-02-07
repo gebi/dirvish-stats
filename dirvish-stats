@@ -97,6 +97,8 @@ def write_db_index(db_name, db_set):
 # ACTIONS
 def action_init(opts, args):
     '''init - initialise db-FILE of specified directories'''
+    fd = open(get_db_index_name(opts.dbfile),'w+')
+    fd.close()
     add_to_db(opts, args, 'nf')     # always create a _new_ db
 
 def action_add(opts, args):
