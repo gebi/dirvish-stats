@@ -208,6 +208,14 @@ def create_stats(db, dir):
             die("wrong or corrupted db (inode=%d): %s" %(inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
+def action_dump(opts, args):
+    '''dump - dump db-file to stdout'''
+    db = gdbm.open(opts.dbfile, 'rf')
+    key = db.firstkey()
+    while key != None:
+        print "%s %s" %(key, db[key])
+        key = db.nextkey(key)
+
 
 # MAIN
 if __name__ == "__main__":
