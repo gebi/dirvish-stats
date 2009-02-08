@@ -63,8 +63,9 @@ def print_stat(dir, size, size_new):
     mb = 1048576
     print "%s: size %s, unshared %s" %(dir, human_sizes(size+size_new), human_sizes(size_new))
 
-def multi_open(filename):
+def multi_open(dir):
     '''Tries to open a possible compressed file based on fileending'''
+    filename = path_join(dir, 'index')
     def gzfile(filename):
         import gzip
         return gzip.GzipFile(filename)
@@ -80,6 +81,7 @@ def multi_open(filename):
             file = filename+ending
             if os.path.exists(file):
                 return fun(file)
+    die('No index files found in: %s/' %os.path.abspath(dir))
 
 def get_db_index_name(db_name):
     return db_name+'.i'
@@ -123,7 +125,7 @@ def add_to_db(opts, args, db_flags):
     db.close()
 
 def create_db(db, dir):
-    file = multi_open(path_join(dir, 'index'))
+    file = multi_open(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size) in parse_index(file):
@@ -156,7 +158,7 @@ def action_rm(opts, args):
     db.close()
 
 def remove_from_db(db, dir):
-    file = multi_open(path_join(dir, 'index'))
+    file = multi_open(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size) in parse_index(file):
@@ -188,8 +190,8 @@ def action_stat(opts, args):
         create_stats(db, dir)
     db.close()
 
-def create_stats(db, dir):
-    file = multi_open(path_join(dir, 'index'))
+def create_stats(db, dir, verbose):
+    file = multi_open(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size) in parse_index(file):
