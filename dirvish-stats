@@ -7,6 +7,7 @@ import inspect
 import gdbm
 from exceptions import *
 
+CONFIG_=None
 
 def die(msg, parser=None):
     sys.stderr.write("Error: "+msg+"\n")
@@ -33,7 +34,7 @@ def parse_index(fd):
         line_num += 1
         data = i.split(None,7)
         try:
-            yield((data[0], data[2][:1], int(data[6])))   # (inode, type, size)
+            yield((data[0], data[2][:1], int(data[6]), i))   # (inode, type, size, line)
         except GeneratorExit:
             pass
         except Exception, e:
@@ -46,6 +47,11 @@ def parse_index(fd):
                 traceback.print_exc()
                 die("parsing %s:%d - \"%s\"" % (fd.name, line_num, " ".join(data)))
 
+def config_human_sizes(size):
+    if CONFIG_.human_readable:
+        return human_sizes(size)
+    else:
+        return str(size)
 
 def human_sizes(size):
     factor = 1024.
@@ -60,8 +66,13 @@ def human_sizes(size):
     return "%d%s" %(int(ret), times_format[times])
 
 def print_stat(dir, size, size_new):
-    mb = 1048576
-    print "%s: size %s, unshared %s" %(dir, human_sizes(size+size_new), human_sizes(size_new))
+    print "%s: size %s, unshared %s" %(dir, config_human_sizes(size+size_new), config_human_sizes(size_new))
+
+def print_new_files(dir, type, size, line):
+    '''Used for output of stat -v'''
+    hsize = config_human_sizes(size)
+    name = line.split(None,10)[10]
+    sys.stdout.write("%s %s" %(hsize, path_join(dir, 'tree', name)))
 
 def multi_open(dir):
     '''Tries to open a possible compressed file based on fileending'''
@@ -128,7 +139,7 @@ def create_db(db, dir):
     file = multi_open(dir)
     stat_size = 0
     stat_size_new = 0
-    for (inode, type, size) in parse_index(file):
+    for (inode, type, size, line) in parse_index(file):
         if type == 'd':
             stat_size_new += size
             continue
@@ -161,7 +172,7 @@ def remove_from_db(db, dir):
     file = multi_open(dir)
     stat_size = 0
     stat_size_new = 0
-    for (inode, type, size) in parse_index(file):
+    for (inode, type, size, line) in parse_index(file):
         if type == 'd':
             stat_size_new += size
             continue
@@ -175,7 +186,7 @@ def remove_from_db(db, dir):
                     stat_size += size
             else:
                 die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt,inode,os.path.abspath(opts.dbfile)))
-        except:
+        except KeyError:
             die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
@@ -187,14 +198,14 @@ def action_stat(opts, args):
         if dir not in db_index:
             warn("%s not in db-index" %dir)
             continue
-        create_stats(db, dir)
+        create_stats(db, dir, opts.verbose)
     db.close()
 
-def create_stats(db, dir, verbose):
+def create_stats(db, dir, verbose=False):
     file = multi_open(dir)
     stat_size = 0
     stat_size_new = 0
-    for (inode, type, size) in parse_index(file):
+    for (inode, type, size, line) in parse_index(file):
         if type == 'd':
             stat_size_new += size
             continue
@@ -202,12 +213,14 @@ def create_stats(db, dir, verbose):
             refcnt = db[inode]
             if refcnt == "1":
                 stat_size_new += size
+                if verbose:
+                    print_new_files(dir, type, size, line)
                 continue
             elif refcnt == "0":
-                die("wrong or corrupted db (refcnt=0;inode=%d): %s" %(inode,+os.path.abspath(opts.dbfile)))
+                die("wrong or corrupted db (refcnt=0;inode=%s): %s" %(inode,+os.path.abspath(opts.dbfile)))
             stat_size += size
-        except:
-            die("wrong or corrupted db (inode=%d): %s" %(inode, os.path.abspath(opts.dbfile)))
+        except KeyError:
+            die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
 def action_dump(opts, args):
@@ -234,12 +247,17 @@ if __name__ == "__main__":
             "%prog is a program which helps determining\n" +\
             "\tused diskspace from hardlinked dirvish backups\n\n" +\
             "ACTIONS:\n" + '\n'.join(docstrings)
-    parser = optparse.OptionParser(usage)
+    parser = optparse.OptionParser(usage, conflict_handler="resolve")
     parser.add_option("-d", "--dbfile", dest="dbfile", default="default.gdbm",
             metavar="FILE", help="Name of database file (%default)")
     parser.add_option("-f", "--force", dest="force", action='store_true',
             default=False, help="Do as i say!")
+    parser.add_option("-h", "--human-readable", dest="human_readable", action='store_true',
+            default=False, help="Print sizes in human readable format")
+    parser.add_option("-v", "--verbose", dest="verbose", action='store_true',
+            default=False, help="Show more output")
     (opts, args) = parser.parse_args()
+    CONFIG_ = opts
     if len(args) <1:
         die("no argument given", parser)
     cmd = args[0]
