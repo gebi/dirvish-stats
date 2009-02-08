@@ -107,7 +107,7 @@ def action_init(opts, args):
     add_to_db(opts, args, 'nf')     # always create a _new_ db
 
 def action_add(opts, args):
-    '''add - add directory(s) to db-FILE'''
+    '''add - add directory(s) to db-file'''
     add_to_db(opts, args, 'cf')     # open an existing db
 
 def add_to_db(opts, args, db_flags):
@@ -178,7 +178,7 @@ def remove_from_db(db, dir):
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
-    '''stat - print statistics of given directories using db-FILE'''
+    '''stat - print statistics of given directories using db-file'''
     db = gdbm.open(opts.dbfile, 'rf')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
