@@ -114,13 +114,13 @@ def write_db_index(db_name, db_set):
 
 # ACTIONS
 def action_init(opts, args):
-    '''init - initialise db-FILE of specified directories'''
+    '''init - Initialise db-FILE with given directories'''
     fd = open(get_db_index_name(opts.dbfile),'w+')
     fd.close()
     add_to_db(opts, args, 'nf')     # always create a _new_ db
 
 def action_add(opts, args):
-    '''add - add directory(s) to db-file'''
+    '''add - Add directories to db-file'''
     add_to_db(opts, args, 'cf')     # open an existing db
 
 def add_to_db(opts, args, db_flags):
@@ -156,7 +156,7 @@ def create_db(db, dir):
     print_stat(dir, stat_size, stat_size_new)
 
 def action_rm(opts, args):
-    '''rm - remove directory from db-file'''
+    '''rm - Remove directories from db-file'''
     db = gdbm.open(opts.dbfile, 'wf')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
@@ -191,7 +191,7 @@ def remove_from_db(db, dir):
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
-    '''stat - print statistics of given directories using db-file'''
+    '''stat - Print statistics of given directories using db-file'''
     db = gdbm.open(opts.dbfile, 'rf')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
@@ -224,7 +224,7 @@ def create_stats(db, dir, verbose=False):
     print_stat(dir, stat_size, stat_size_new)
 
 def action_dump(opts, args):
-    '''dump - dump db-file to stdout'''
+    '''dump - Dump human readable form of db-file (inode refcount)'''
     db = gdbm.open(opts.dbfile, 'rf')
     key = db.firstkey()
     while key != None:
@@ -248,10 +248,10 @@ if __name__ == "__main__":
             "\tused diskspace from hardlinked dirvish backups\n\n" +\
             "ACTIONS:\n" + '\n'.join(docstrings)
     parser = optparse.OptionParser(usage, conflict_handler="resolve")
-    parser.add_option("-d", "--dbfile", dest="dbfile", default="default.gdbm",
+    parser.add_option("-f", "--dbfile", dest="dbfile", default="default.gdbm",
             metavar="FILE", help="Name of database file (%default)")
-    parser.add_option("-f", "--force", dest="force", action='store_true',
-            default=False, help="Do as i say!")
+    #parser.add_option("-f", "--force", dest="force", action='store_true',
+    #        default=False, help="Do as i say!")
     parser.add_option("-h", "--human-readable", dest="human_readable", action='store_true',
             default=False, help="Print sizes in human readable format")
     parser.add_option("-v", "--verbose", dest="verbose", action='store_true',

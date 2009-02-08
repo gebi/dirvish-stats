@@ -1,0 +1,99 @@
+DIRVISH-STATS(8)
+================
+Michael Gebetsroither <gebi@grml.org>
+
+
+NAME
+----
+dirvish-stats - program which helps determining used diskspace from hardlinked dirvish backups
+
+
+SYNOPSIS
+--------
+*DIRVISH-STATS* [OPTIONS] '<ACTION>' '<DIR>' [DIR] ...
+
+
+DESCRIPTION
+-----------
+*DIRVISH-STATS* is a program that
+provides an easy view on how much diskspace could be freeed if you delete one particular day of your hardlinked backups.
+
+DESIGN
+------
+*dirvish-stats* is created for a maximum amount of backups and used diskspace.
+Thus it uses only constant amount of 'RAM' and 'DOES NOT' access the backup files itself (not even from a single backup day).
+For this to achieve it uses a simple key-value storage to track inode numbers and their reference count.
+
+REQUIREMENTS
+------------
+You need to have python-gdbm installed and index generation enabled in dirvish for the particular vaults.
+
+ACTIONS
+-------
+*init*::
+  Initialise db-FILE with given directories.
+
+*add*::
+  Add directories to db-file.
+
+*rm*::
+  Remove directories from db-file
+
+*stat*::
+  Print statistics of given directories using db-file
+
+*dump*::
+  Dump human readable form of db-file (inode refcount)
+
+*help*::
+  Show the help message.
+
+
+OPTIONS
+-------
+*help*::
+Show summary of options.
+
+*-v, --verbose*::
+Show more output.
+
+*-f, --dbfile (default=default.gdbm)*::
+Name of database file.
+
+*-h, --human-readable (default=False)*::
+Print sizes in human readable format.
+
+
+EXAMPLES
+--------
+*dirvish-stats -h init default_\**::
+Initialises the database for all backup days in this vault matching the directory name default_\*.
+Additionaly it already outputs the statistics in human readable form as it populates the database.
+As you might notice the statistics get better the more directories are put into the db.
+This is thought only as a hint as theoretically *only* the last directory shows the right unshared value, but in reality only the statistics of the first directory is bogus.
+And the following statistics are not that far off.
+
+*dirvish-stats -h stat default_20090202 default_20090203*::
+This will display the statistics of the given two backup days in human readable form.
+
+*dirvish-stats -v stat default_20090202 |sort -n |head -n20*::
+This will print the biggest 20 changed files from this backup.
+
+*dirvish-stats rm default_20090202 default_20090203*::
+This removes the two backups from the database.
+
+*dirvish-stats add -f data.gdbm data_20090207 data_20090208*::
+This will add the two backups to the database *data.gdbm*.
+
+*dirvish-stats dump -f data.gdbm*::
+Dump the database in human readable form to stdout.
+
+
+SEE ALSO
+--------
+dirvish(8), dirvish-conf(5)
+
+
+AUTHOR
+------
+DIRVISH-STATS and this manpages were written by Michael Gebetsroither <gebi@grml.org>.
