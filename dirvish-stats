@@ -162,6 +162,67 @@ def write_db_index(db_name, db_set):
     fd.close()
 
 
+class CommonDB(object):
+    #def put(self, inode, refcnt):
+    #    pass
+    def get(self, inode):
+        pass
+    def increment(self, inode):
+        pass
+    def decrement(self, inode):
+        pass
+    def close(self):
+        pass
+
+class Gdbm(CommonDB):
+    def __init__(self, file, flags):
+        self.db = gdbm.open(file, flags)
+        self.dbfile = file
+    def get(self, inode):
+        return int(self.db[inode])
+    def increment(self, inode):
+        refcnt = 1
+        try:
+            refcnt = int(self.db[inode])
+            refcnt += 1
+        except KeyError:
+            pass
+        self.db[inode] = str(refcnt)
+        return recnt
+    def decrement(self, inode):
+        try:
+            refcnt = int(self.db[inode])
+            if refcnt > 0:
+                refcnt -= 1
+                self.db[inode] = str(refcnt)
+                return refcnt
+            else:
+                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt,inode,os.path.abspath(self.dbfile)))
+        except KeyError:
+            die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(self.dbfile)))
+    def close(self):
+        self.db.close()
+
+class Sqlite(CommonDB):
+    def __init__(self, file, flags=None):
+        import sqlite3
+        self.db = sqlite3.connect(file)
+        self.db.execute("PRAGMA synchronous = OFF") # unuseable slow otherwise
+    def init(self):
+        self.db.execute("create table mapping (inode integer primary key, refcnt integer default 1)")
+    def add(self, inode):
+        self.db.execute("insert into mapping(inode) values(?)", (inode,))
+    def get(self, inode):
+        cur = self.db.execute("select (refcnt) from mapping where inode=?", (inode,))
+        return cur.fetchone()[0]
+    def increment(self, inode):
+        self.db.execute("update mapping set refcnt = refcnt+1 where inode=?", (inode,))
+    def decrement(self, inode):
+        self.db.execute("update mapping set refcnt = refcnt-1 where inode=? and refcnt >0", (inode,))
+    def close(self):
+        self.db.commit()
+
+
 # ACTIONS
 def action_init(opts, args):
     '''init - Initialise db-FILE with given directories'''
