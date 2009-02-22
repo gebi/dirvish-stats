@@ -190,7 +190,7 @@ def remove_from_db(db, dir):
                 else:
                     stat_size += size
             else:
-                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt,inode,os.path.abspath(opts.dbfile)))
+                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(opts.dbfile)))
         except KeyError:
             die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
