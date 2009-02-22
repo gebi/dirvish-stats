@@ -222,7 +222,7 @@ def create_stats(db, dir, verbose=False):
                     print_new_files(dir, type, size, line)
                 continue
             elif refcnt == "0":
-                die("wrong or corrupted db (refcnt=0;inode=%s): %s" %(inode,+os.path.abspath(opts.dbfile)))
+                die("wrong or corrupted db (refcnt=0;inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
             stat_size += size
         except KeyError:
             die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
