@@ -23,6 +23,7 @@ DESIGN
 *dirvish-stats* is created for a maximum amount of backups and used diskspace.
 Thus it uses only constant amount of 'RAM' and 'DOES NOT' access the backup files itself (not even from a single backup day).
 For this to achieve it uses a simple key-value storage to track inode numbers and their reference count.
+It also requires you to enable the index feature in dirvish (compressed either with gzip or bzip2).
 
 REQUIREMENTS
 ------------
