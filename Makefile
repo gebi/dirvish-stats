@@ -13,6 +13,9 @@ doc: doc_man doc_html
 doc_html: $(addsuffix .html, $(MANPAGES))
 doc_man: $(addsuffix .gz, $(MANPAGES))
 
+test:
+	cd tests && python dirvish-stats_test.py -v
+
 clean:
 	@for i in $(MANPAGES); do \
 		rm -f $$i.html $$i.xml $$i.gz; done
