@@ -61,14 +61,14 @@ def config_human_sizes(size):
 def human_sizes(size):
     factor = 1024.
     times = 0
-    times_format = ['', 'K', 'M', 'G', 'T', 'P']
-    ret = float(size)
-    while ret > factor:
-        ret /= factor
+    times_format = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
+    ret = size
+    while ret >= factor:
+        ret = ret >> 10
         times += 1
         if ret < 10:
-            return "%.1f%s" %(ret, times_format[times])
-    return "%d%s" %(int(ret), times_format[times])
+            return "%.1f%s" %(float(ret), times_format[times])
+    return "%d%s" %(ret, times_format[times])
 
 def print_stat(dir, size, size_new):
     print "%s: size %s, unshared %s" %(dir, config_human_sizes(size+size_new), config_human_sizes(size_new))
