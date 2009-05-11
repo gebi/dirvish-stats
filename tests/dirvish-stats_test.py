@@ -3,6 +3,7 @@
 
 import dirvish_stats as ds
 import unittest
+import os
 
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):
@@ -22,6 +23,21 @@ class HumanSizes(unittest.TestCase):
         for s in "11K 11M 11G 11T 11P 11E 11Z 11Y".split():
             self.assertEqual(s, ds.human_sizes(base**i+(base**i*10)))
             i +=1
+
+class MultiOpen(unittest.TestCase):
+    teststring_='test\n'
+    def multi_open(self, filename):
+        self.assertEqual(self.teststring_, ds.multi_open(filename).readlines()[0])
+    def testGzip(self):
+        self.multi_open('multi_open/gz/foo')
+        self.multi_open('multi_open/gzip/foo')
+    def testBzip2(self):
+        self.multi_open('multi_open/bz2/foo')
+        self.multi_open('multi_open/bzip2/foo')
+    def testPlain(self):
+        self.multi_open('multi_open/plain/foo')
+    def testFileNotFound(self):
+        self.assertRaises(RuntimeError, self.multi_open, 'multi_open/nonexistent')
 
 if __name__ == '__main__':
     unittest.main()

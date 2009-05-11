@@ -79,9 +79,8 @@ def print_new_files(dir, type, size, line):
     name = line.split(None,10)[10]
     sys.stdout.write("%s %s" %(hsize, path_join(dir, 'tree', name)))
 
-def multi_open(dir):
-    '''Tries to open a possible compressed file based on fileending'''
-    filename = path_join(dir, 'index')
+def multi_open(path):
+    '''Trie to open a possible compressed file based on fileending'''
     def gzfile(filename):
         import gzip
         return gzip.GzipFile(filename)
@@ -94,10 +93,18 @@ def multi_open(dir):
            ]
     for (endings, fun) in opts:
         for ending in endings:
-            file = filename+ending
+            file = path+ending
             if os.path.exists(file):
                 return fun(file)
-    die('No index files found in: %s/' %os.path.abspath(dir))
+    raise RuntimeError('No index files found: %s' %os.path.abspath(path))
+
+def open_dirvish_index(dir):
+    '''Open possible compressed dirvish index file from dir'''
+    path = path_join(dir, 'index')
+    try:
+        return multi_open(path)
+    except RuntimeError, e:
+        die(e.message)
 
 def get_db_index_name(db_name):
     return db_name+'.i'
@@ -141,7 +148,7 @@ def add_to_db(opts, args, db_flags):
     db.close()
 
 def create_db(db, dir):
-    file = multi_open(dir)
+    file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, line) in parse_index(file):
@@ -174,7 +181,7 @@ def action_rm(opts, args):
     db.close()
 
 def remove_from_db(db, dir):
-    file = multi_open(dir)
+    file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, line) in parse_index(file):
@@ -207,7 +214,7 @@ def action_stat(opts, args):
     db.close()
 
 def create_stats(db, dir, verbose=False):
-    file = multi_open(dir)
+    file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, line) in parse_index(file):
