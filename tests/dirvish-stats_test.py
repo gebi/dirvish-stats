@@ -26,18 +26,20 @@ class HumanSizes(unittest.TestCase):
 
 class MultiOpen(unittest.TestCase):
     teststring_='test\n'
+    def wd(self, path):
+        return os.path.join('multi_open', path)
     def multi_open(self, filename):
         self.assertEqual(self.teststring_, ds.multi_open(filename).readlines()[0])
     def testGzip(self):
-        self.multi_open('multi_open/gz/foo')
-        self.multi_open('multi_open/gzip/foo')
+        self.multi_open(self.wd('gz/foo'))
+        self.multi_open(self.wd('gzip/foo'))
     def testBzip2(self):
-        self.multi_open('multi_open/bz2/foo')
-        self.multi_open('multi_open/bzip2/foo')
+        self.multi_open(self.wd('bz2/foo'))
+        self.multi_open(self.wd('bzip2/foo'))
     def testPlain(self):
-        self.multi_open('multi_open/plain/foo')
+        self.multi_open(self.wd('plain/foo'))
     def testFileNotFound(self):
-        self.assertRaises(RuntimeError, self.multi_open, 'multi_open/nonexistent')
+        self.assertRaises(RuntimeError, self.multi_open, self.wd('nonexistent'))
 
 if __name__ == '__main__':
     unittest.main()
