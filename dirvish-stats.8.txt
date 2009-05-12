@@ -10,7 +10,7 @@ dirvish-stats - program which helps determining used diskspace from hardlinked d
 
 SYNOPSIS
 --------
-*DIRVISH-STATS* [OPTIONS] '<ACTION>' '<DIR>' [DIR] ...
+*DIRVISH-STATS* [OPTIONS] '<ACTION>' '<DIR/FILE>' [DIR/FILE] ...
 
 
 DESCRIPTION
@@ -32,7 +32,7 @@ You need to have python-gdbm installed and index generation enabled in dirvish f
 ACTIONS
 -------
 *init*::
-  Initialise db-FILE with given directories.
+  Initialise db-FILE with given dirvish backup directories or index files directly.
 
 *add*::
   Add directories to db-file.

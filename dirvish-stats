@@ -98,9 +98,15 @@ def multi_open(path):
                 return fun(file)
     raise RuntimeError('No index files found: %s' %os.path.abspath(path))
 
-def open_dirvish_index(dir):
-    '''Open possible compressed dirvish index file from dir'''
-    path = path_join(dir, 'index')
+def open_dirvish_index(file_or_dir):
+    '''Open possible compressed dirvish index file'''
+    path = file_or_dir
+    if os.path.islink(file_or_dir):
+        realpath = os.path.realpath(file_or_dir)
+        if os.path.isdir(realpath):
+            path = realpath
+    elif os.path.isdir(file_or_dir):
+        path = path_join(file_or_dir, 'index')
     try:
         return multi_open(path)
     except RuntimeError, e:
@@ -255,7 +261,7 @@ if __name__ == "__main__":
                 actions[k[len(prefix):]] = v
     docstrings = [ '\t'+inspect.getdoc(i) for i in actions.itervalues() ]
     docstrings.sort()
-    usage = "usage: %prog [options] <action> [DIR] [DIR] ...\n\n" +\
+    usage = "usage: %prog [options] <action> [DIR/FILE] [DIR/FILE] ...\n\n" +\
             "%prog is a program which helps determining\n" +\
             "\tused diskspace from hardlinked dirvish backups\n\n" +\
             "ACTIONS:\n" + '\n'.join(docstrings)

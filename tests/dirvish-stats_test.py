@@ -5,6 +5,10 @@ import dirvish_stats as ds
 import unittest
 import os
 
+class ExternalAction(unittest.TestCase):
+    def testInitDB(self):
+        pass
+
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):
         teststring  = "0 999 1000 1001 1023 1024 1025".split()
