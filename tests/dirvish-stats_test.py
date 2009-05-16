@@ -4,10 +4,113 @@
 import dirvish_stats as ds
 import unittest
 import os
+import tempfile
+import subprocess
 
-class ExternalAction(unittest.TestCase):
+BIN_='./dirvish_stats.py'
+
+class BlackBox(unittest.TestCase):
+    def setUp(self):
+        self.tmp_ = tempfile.mkdtemp(prefix='dirvish-stats_test_')
+        self.null_ = open('/dev/null', 'rw')
+    def tearDown(self):
+        os.rmdir(self.tmp_)
+
+    def _wd(self, filename):
+        return ds.path_join(self.tmp_, filename)
+    def _line(self, spec):
+        '''123 0 -rwxrwxrwx 1 user group 1000 May 13 14:27 filename'''
+        (inode, type, size) = spec.split()
+        ret = "%d 0 %srwxrwxrwx 1 user group %d May 13 14:27 filename" %(int(inode), type, int(size))
+        return ret
+    def _createspec(self, specname, spec):
+        data = '\n'.join([ self._line(i) for i in spec ])
+        specfile = open(self._wd(specname), 'a')
+        specfile.write(data)
+        specfile.close()
+        return specfile.name
+    def _createdb(self, spec, action='init'):
+        dbname = self._wd('external_action.gdbm')
+        cmd = [BIN_, '-f', dbname, action, spec]
+        (out, err) = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE).communicate()
+        self.assertEqual(err, '')
+        return dbname
+    def _dumpdb(self, dbname):
+        (out, err) = subprocess.Popen([BIN_, 'dump', '-f', dbname], stdout=subprocess.PIPE,
+                                                                    stderr=subprocess.PIPE).communicate()
+        self.assertEqual(err, '')
+        ret = {}
+        for i in out.split('\n'):
+            line = i.rstrip()
+            if line == "":
+                continue
+            (inode, refcnt) = line.split()
+            ret[int(inode)] = int(refcnt)
+        return ret
+    def _rmdb(self, dbname):
+        if dbname is None:
+            return
+        os.remove(dbname)
+        for i in open(dbname+'.i'):
+            file = i.rstrip()
+            assert file.startswith(self.tmp_)
+            os.remove(file)
+        os.remove(dbname+'.i')
+
     def testInitDB(self):
-        pass
+        dbname = None
+        spec = None
+        try:
+            spec = self._createspec('1', ["123 - 1248", "123 - 4182", "1234 - 111"])
+            dbname = self._createdb(spec)
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret[123], 2)
+            self.assertEqual(ret[1234], 1)
+        finally:
+            self._rmdb(dbname)
+    def testAdd(self):
+        dbname = None
+        spec = None
+        try:
+            spec1 = self._createspec('1', ["123 - 1248"])
+            spec2 = self._createspec('2', ["123 - 4182"])
+            dbname = self._createdb(spec1)
+            dbname = self._createdb(spec2, action='add')
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret[123], 2)
+        finally:
+            self._rmdb(dbname)
+    def testAddDirectory(self):
+        dbname = None
+        spec = None
+        try:
+            spec = self._createspec('1', ["1234 d 111"])
+            dbname = self._createdb(spec)
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret.has_key(1234), False)
+        finally:
+            self._rmdb(dbname)
+    def testRemove(self):
+        dbname = None
+        spec2 = None
+        try:
+            spec1 = self._createspec('1', ["123 - 111"])
+            spec2 = self._createspec('2', ["1234 - 111"])
+            # add + check
+            dbname = self._createdb(spec1)
+            dbname = self._createdb(spec2, action='add')
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret[1234], 1)
+            # remove + check
+            dbname = self._createdb(spec2, action='rm')
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret[123], 1)
+            self.assertEqual(ret[1234], 0)
+        finally:
+            self._rmdb(dbname)
+            os.remove(spec2)
+
 
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):
