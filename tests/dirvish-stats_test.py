@@ -110,7 +110,34 @@ class BlackBox(unittest.TestCase):
         finally:
             self._rmdb(dbname)
             os.remove(spec2)
-
+    def testDoubleAdd(self):
+        dbname = None
+        try:
+            spec1 = self._createspec('1', ["123 - 1248"])
+            spec2 = self._createspec('2', ["1234 - 1248"])
+            dbname = self._createdb(spec1)
+            dbname = self._createdb(spec2, action='add')
+            self.assertRaises(AssertionError, self._createdb, spec1, action='add')
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret[123], 1)
+            self.assertEqual(ret[1234], 1)
+        finally:
+            self._rmdb(dbname)
+    def testDoubleRemove(self):
+        dbname = None
+        spec2 = None
+        try:
+            spec1 = self._createspec('1', ["123 - 1248"])
+            spec2 = self._createspec('2', ["1234 - 1248"])
+            dbname = self._createdb(spec1)
+            dbname = self._createdb(spec2, action='add')
+            dbname = self._createdb(spec2, action='rm')
+            self.assertRaises(AssertionError, self._createdb, spec2, action='rm')
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret[123], 1)
+        finally:
+            self._rmdb(dbname)
+            os.remove(spec2)
 
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):
