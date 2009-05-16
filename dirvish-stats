@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Filename:      dirvish-stats
 # Purpose:       helps determining used diskspace from hardlinked dirvish backups
 # Authors:       (c) Michael Gebetsroither <gebi@grml.org>
