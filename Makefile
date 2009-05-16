@@ -14,6 +14,9 @@ doc_html: $(addsuffix .html, $(MANPAGES))
 doc_man: $(addsuffix .gz, $(MANPAGES))
 
 test:
+	cd tests && python dirvish-stats_test.py
+
+testv:
 	cd tests && python dirvish-stats_test.py -v
 
 clean:
