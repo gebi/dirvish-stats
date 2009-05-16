@@ -42,7 +42,6 @@ class ParseIndex(unittest.TestCase):
     def testTryDev(self):
         (out, err) = subprocess.Popen('find /dev -ls'.split(), stdout=subprocess.PIPE,
                                                                stderr=subprocess.PIPE).communicate()
-        self.assertEqual(err, '')
         test = self._parse(out)
         self.assertTrue(len(test) > 1)
 
