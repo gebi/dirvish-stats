@@ -6,8 +6,45 @@ import unittest
 import os
 import tempfile
 import subprocess
+import StringIO
 
 BIN_='./dirvish_stats.py'
+
+class ParseIndex(unittest.TestCase):
+    def _parse(self, line):
+        strio = StringIO.StringIO(line)
+        strio.seek(0)
+        return list(ds.parse_index(strio))
+    def testFile(self):
+        line = '123 0 -rwxrwxrwx 1 user group 1000 May 13 14:27 filename\n'
+        out = self._parse(line)
+        self.assertEqual(('123', '-', 1000, line), out[0])
+    def testDirectory(self):
+        line = '123 0 drwxrwxrwx 1 user group 1000 May 13 14:27 filename\n'
+        out = self._parse(line)
+        self.assertEqual(('123', 'd', 1000, line), out[0])
+    def testDevCharLinux(self):
+        line = '123 0 crwxrwxrwx 1 user group      May 13 14:27 filename\n'
+        out = self._parse(line)
+        self.assertEqual(len(out), 0)
+    def testDevBlockLinux(self):
+        line = '123 0 brwxrwxrwx 1 user group      May 13 14:27 filename\n'
+        out = self._parse(line)
+        self.assertEqual(len(out), 0)
+    def testDevCharBSD(self):
+        line = '123 0 crwxrwxrwx 1 user group 3, 2 May 13 14:27 filename\n'
+        out = self._parse(line)
+        self.assertEqual(len(out), 0)
+    def testDevBlockBSD(self):
+        line = '123 0 brwxrwxrwx 1 user group 0, 2 May 13 14:27 filename\n'
+        out = self._parse(line)
+        self.assertEqual(len(out), 0)
+    def testTryDev(self):
+        (out, err) = subprocess.Popen('find /dev -ls'.split(), stdout=subprocess.PIPE,
+                                                               stderr=subprocess.PIPE).communicate()
+        self.assertEqual(err, '')
+        test = self._parse(out)
+        self.assertTrue(len(test) > 1)
 
 class BlackBox(unittest.TestCase):
     def setUp(self):
