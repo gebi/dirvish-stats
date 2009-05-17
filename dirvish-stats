@@ -1,29 +1,32 @@
 #!/usr/bin/env python
 # Filename:      dirvish-stats
-# Purpose:       helps determining used diskspace from hardlinked dirvish backups
+# Purpose:       Helps determining used diskspace from hardlinked dirvish backups
 # Authors:       (c) Michael Gebetsroither <gebi@grml.org>
 # License:       This file is licensed under the GPL v2.
 ################################################################################
+'''Helps determining used diskspace from hardlinked dirvish backups'''
 
 import os
 import sys
 import optparse
 import inspect
 import gdbm
-from exceptions import *
 
-CONFIG_=None
+CONFIG_ = None
 
 def die(msg, parser=None):
+    '''Print error message to stderr and exit'''
     sys.stderr.write("Error: "+msg+"\n")
     if parser:
         parser.print_help()
     sys.exit(1)
 
 def warn(msg):
+    '''Print warning message to stderr'''
     sys.stderr.write("Error: "+msg+"\n")
 
 class ParsingError(Exception):
+    '''Parsing error Exception'''
     def __init__(self, name, line_num, line):
         Exception.__init__(self)
         self.name = name
@@ -43,29 +46,32 @@ def path_join(a, *p):
     return path
 
 def parse_index(fd):
+    '''Prases the output of find -ls for inode, type and size'''
     line_num = 0
     for i in fd:
         line_num += 1
-        data = i.split(None,7)
+        data = i.split(None, 7)
         try:
             yield((data[0], data[2][:1], int(data[6]), i))   # (inode, type, size, line)
         except GeneratorExit:
             pass
-        except Exception, e:
+        except Exception:
             braindead_find = False
-            for type in ['c', 'b']:
-                if data[2].startswith(type):
+            for file_type in ['c', 'b']:
+                if data[2].startswith(file_type):
                     braindead_find = True
             if not braindead_find:
                 raise ParsingError(fd.name, line_num, " ".join(data))
 
 def config_human_sizes(size):
+    '''Call human_sizes depending on user config'''
     if CONFIG_.human_readable:
         return human_sizes(size)
     else:
         return str(size)
 
 def human_sizes(size):
+    '''Convert integers to human readable sizes'''
     factor = 1024.
     times = 0
     times_format = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y']
@@ -74,35 +80,38 @@ def human_sizes(size):
         ret = ret >> 10
         times += 1
         if ret < 10:
-            return "%.1f%s" %(float(ret), times_format[times])
-    return "%d%s" %(ret, times_format[times])
+            return "%.1f%s" % (float(ret), times_format[times])
+    return "%d%s" % (ret, times_format[times])
 
-def print_stat(dir, size, size_new):
-    print "%s: size %s, unshared %s" %(dir, config_human_sizes(size+size_new), config_human_sizes(size_new))
+def print_stat(path, size, size_new):
+    '''Print statistics of one dirvish vault'''
+    print "%s: size %s, unshared %s" % (path, config_human_sizes(size+size_new), config_human_sizes(size_new))
 
-def print_new_files(dir, type, size, line):
+def print_new_files(path, size, line):
     '''Used for output of stat -v'''
     hsize = config_human_sizes(size)
-    name = line.split(None,10)[10]
-    sys.stdout.write("%s %s" %(hsize, path_join(dir, 'tree', name)))
+    name = line.split(None, 10)[10]
+    sys.stdout.write("%s %s" % (hsize, path_join(path, 'tree', name)))
 
 def multi_open(path):
     '''Trie to open a possible compressed file based on fileending'''
     def gzfile(filename):
+        '''Open gzip compressed file'''
         import gzip
         return gzip.GzipFile(filename)
     def bzfile(filename):
+        '''Open bzip2 compressed file'''
         import bz2
         return bz2.BZ2File(filename)
-    opts = [(['.gzip','.gz'], gzfile),
+    opts = [(['.gzip', '.gz'], gzfile),
             (['.bzip2', '.bz2'], bzfile),
             ([''], open)
            ]
     for (endings, fun) in opts:
         for ending in endings:
-            file = path+ending
-            if os.path.exists(file):
-                return fun(file)
+            file_name = path+ending
+            if os.path.exists(file_name):
+                return fun(file_name)
     raise RuntimeError('No index files found: %s' %os.path.abspath(path))
 
 def open_dirvish_index(file_or_dir):
@@ -120,15 +129,18 @@ def open_dirvish_index(file_or_dir):
         die(e.message)
 
 def get_db_index_name(db_name):
+    '''Get name of our index file from db filename'''
     return db_name+'.i'
 
 def read_db_index(db_name):
+    '''Read content of our db index file'''
     s = set()
     for line in open(get_db_index_name(db_name),'r'):
         s.add(line.rstrip())
     return s
 
 def write_db_index(db_name, db_set):
+    '''Write all dirvish vaults contained in db file to our index file'''
     fd = open(get_db_index_name(db_name),'w+')
     l = list(db_set)
     l.sort()
@@ -149,11 +161,12 @@ def action_add(opts, args):
     add_to_db(opts, args, 'cf')     # open an existing db
 
 def add_to_db(opts, args, db_flags):
+    '''Backend function for action_init/action_add'''
     db = gdbm.open(opts.dbfile, db_flags)
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir in db_index:
-            warn("%s already in db %s" %(dir, os.path.abspath(opts.dbfile)))
+            warn("%s already in db %s" % (dir, os.path.abspath(opts.dbfile)))
             continue
         db_index.add(dir)
         create_db(db, dir)
@@ -161,10 +174,11 @@ def add_to_db(opts, args, db_flags):
     db.close()
 
 def create_db(db, dir):
+    '''Parse one dirvish index file from dir and _add_ it to db'''
     file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
-    for (inode, type, size, line) in parse_index(file):
+    for (inode, type, size, _line) in parse_index(file):
         if type == 'd':
             stat_size_new += size
             continue
@@ -194,10 +208,11 @@ def action_rm(opts, args):
     db.close()
 
 def remove_from_db(db, dir):
+    '''Parse one dirvish index file from dir and _remove_ it to db'''
     file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
-    for (inode, type, size, line) in parse_index(file):
+    for (inode, type, size, _line) in parse_index(file):
         if type == 'd':
             stat_size_new += size
             continue
@@ -210,9 +225,9 @@ def remove_from_db(db, dir):
                 else:
                     stat_size += size
             else:
-                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(opts.dbfile)))
+                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" % (refcnt, inode, os.path.abspath(opts.dbfile)))
         except KeyError:
-            die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
+            die("wrong or corrupted db (inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
@@ -227,6 +242,7 @@ def action_stat(opts, args):
     db.close()
 
 def create_stats(db, dir, verbose=False):
+    '''Parse one dirvish index file from dir and output statistics'''
     file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
@@ -239,21 +255,21 @@ def create_stats(db, dir, verbose=False):
             if refcnt == "1":
                 stat_size_new += size
                 if verbose:
-                    print_new_files(dir, type, size, line)
+                    print_new_files(dir, size, line)
                 continue
             elif refcnt == "0":
-                die("wrong or corrupted db (refcnt=0;inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
+                die("wrong or corrupted db (refcnt=0;inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
             stat_size += size
         except KeyError:
-            die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(opts.dbfile)))
+            die("wrong or corrupted db (inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
     print_stat(dir, stat_size, stat_size_new)
 
-def action_dump(opts, args):
+def action_dump(opts, _args):
     '''dump - Dump human readable form of db-file (inode refcount)'''
     db = gdbm.open(opts.dbfile, 'rf')
     key = db.firstkey()
     while key != None:
-        print "%s %s" %(key, db[key])
+        print "%s %s" % (key, db[key])
         key = db.nextkey(key)
 
 
@@ -261,7 +277,7 @@ def action_dump(opts, args):
 if __name__ == "__main__":
     # actionname -> fun()
     actions = {}
-    for k,v in globals().copy().iteritems():
+    for k, v in globals().copy().iteritems():
         prefix = 'action_'
         if k.startswith(prefix):
             if callable(v):
