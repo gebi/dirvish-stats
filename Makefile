@@ -19,6 +19,12 @@ test:
 testv:
 	cd tests && python dirvish-stats_test.py -v
 
+check:
+	pylint --include-ids=y --max-line-length=120 --disable-msg=W0621,W0622,C0103 \
+		--reports=no dirvish-stats 2>/dev/null || true
+	@pylint --include-ids=y --max-line-length=120 --disable-msg=W0621,W0622,C0103 \
+		dirvish-stats 2>/dev/null |tail -n5
+
 clean:
 	@for i in $(MANPAGES); do \
 		rm -f $$i.html $$i.xml $$i.gz; done
