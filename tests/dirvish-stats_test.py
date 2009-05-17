@@ -55,11 +55,14 @@ class ParseIndex(unittest.TestCase):
                                                                stderr=subprocess.PIPE).communicate()
         test = self._parse(out)
         self.assertTrue(len(test) > 1)
+    def testInvalid(self):
+        self.assertRaises(IndexError, self._parse, '123 invalid')
+        self.assertRaises(ds.ParsingError, self._parse, '123 0 -rwxrwxrwx 1 user group SIZE_ERROR May 13 14:27 filename')
 
 class BlackBox(unittest.TestCase):
     def setUp(self):
         self.tmp_ = tempfile.mkdtemp(prefix='dirvish-stats_test_')
-        self.null_ = open('/dev/null', 'rw')
+        self.dbname_ = self._wd('external_action.gdbm')
     def tearDown(self):
         os.rmdir(self.tmp_)
 
@@ -70,17 +73,21 @@ class BlackBox(unittest.TestCase):
         (inode, type, size) = spec.split()
         ret = "%d 0 %srwxrwxrwx 1 user group %d May 13 14:27 filename" %(int(inode), type, int(size))
         return ret
-    def _createspec(self, specname, spec):
-        data = '\n'.join([ self._line(i) for i in spec ])
+    def _createspec(self, specname, spec=None, lines=None):
+        if lines == None:
+            data = '\n'.join([ self._line(i) for i in spec ])
+        else:
+            data = '\n'.join(lines)
         specfile = open(self._wd(specname), 'a')
         specfile.write(data)
         specfile.close()
         return specfile.name
     def _createdb(self, spec, action='init'):
-        dbname = self._wd('external_action.gdbm')
+        dbname = self.dbname_
         cmd = [BIN_, '-f', dbname, action, spec]
         (out, err) = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE).communicate()
+        #print err
         self.assertEqual(err, '')
         return dbname
     def _dumpdb(self, dbname):
@@ -185,6 +192,21 @@ class BlackBox(unittest.TestCase):
         finally:
             self._rmdb(dbname)
             os.remove(spec2)
+    def testInvalid(self):
+        dbname = None
+        spec = None
+        try:
+            speclines = ['123 0 -rwxrwxrwx 1 user group SIZE_ERROR May 13 14:27 filename']
+            spec = self._createspec('1', lines=speclines)
+            dbname = self.dbname_
+            cmd = [BIN_, '-f', dbname, 'init', spec]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
+            (out, err) = process.communicate()
+            self.assertEqual(process.returncode, 1)
+        finally:
+            self._rmdb(dbname)
+            os.remove(spec)
 
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):

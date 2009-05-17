@@ -23,6 +23,15 @@ def die(msg, parser=None):
 def warn(msg):
     sys.stderr.write("Error: "+msg+"\n")
 
+class ParsingError(Exception):
+    def __init__(self, name, line_num, line):
+        Exception.__init__(self)
+        self.name = name
+        self.line_num = line_num
+        self.line = line
+    def __str__(self):
+        return "Error: parsing %s:%d - \"%s\"" % (self.name, self.line_num, self.line)
+
 def path_join(a, *p):
     '''pythons braindead os.path.join skips over all parts before an absolute path'''
     path = a
@@ -48,9 +57,7 @@ def parse_index(fd):
                 if data[2].startswith(type):
                     braindead_find = True
             if not braindead_find:
-                import traceback
-                traceback.print_exc()
-                die("parsing %s:%d - \"%s\"" % (fd.name, line_num, " ".join(data)))
+                raise ParsingError(fd.name, line_num, " ".join(data))
 
 def config_human_sizes(size):
     if CONFIG_.human_readable:
