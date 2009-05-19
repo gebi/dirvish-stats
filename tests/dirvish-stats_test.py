@@ -132,7 +132,6 @@ class BlackBox(unittest.TestCase):
 
     def testInitDB(self):
         dbname = None
-        spec = None
         try:
             spec = self._createspec('1', ["123 - 1248", "123 - 4182", "1234 - 111"])
             dbname = self._createdb(spec)
@@ -143,7 +142,6 @@ class BlackBox(unittest.TestCase):
             self._rmdb(dbname)
     def testAdd(self):
         dbname = None
-        spec = None
         try:
             spec1 = self._createspec('1', ["123 - 1248"])
             spec2 = self._createspec('2', ["123 - 4182"])
@@ -155,7 +153,6 @@ class BlackBox(unittest.TestCase):
             self._rmdb(dbname)
     def testAddDirectory(self):
         dbname = None
-        spec = None
         try:
             spec = self._createspec('1', ["1234 d 111"])
             dbname = self._createdb(spec)
