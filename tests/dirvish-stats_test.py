@@ -74,6 +74,11 @@ class Cleaner(object):
 
 class BlackBox(unittest.TestCase):
     def setUp(self):
+        try:
+            if os.path.isdir(self.tmp_):
+                shutil.rmtree(self.tmp_)
+        except AttributeError:
+            pass
         self.tmp_ = tempfile.mkdtemp(prefix='dirvish-stats_test_')
         self.dbname_ = self._wd('external_action.gdbm')
     def tearDown(self):
