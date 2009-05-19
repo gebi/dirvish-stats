@@ -59,6 +59,19 @@ class ParseIndex(unittest.TestCase):
         self.assertRaises(IndexError, self._parse, '123 invalid')
         self.assertRaises(ds.ParsingError, self._parse, '123 0 -rwxrwxrwx 1 user group SIZE_ERROR May 13 14:27 filename')
 
+class Cleaner(object):
+    def __init__(self, file=None):
+        self.file_ = file
+    def add(self, file):
+        if self.file_ != None:
+            assert(self.file_ == file)
+        self.file_ = file
+    def cleanup(self):
+        if self.file_ != None:
+            os.remove(self.file_)
+    def str(self):
+        return self.file_
+
 class BlackBox(unittest.TestCase):
     def setUp(self):
         self.tmp_ = tempfile.mkdtemp(prefix='dirvish-stats_test_')
@@ -147,7 +160,7 @@ class BlackBox(unittest.TestCase):
             self._rmdb(dbname)
     def testRemove(self):
         dbname = None
-        spec2 = None
+        cleanup_spec2 = Cleaner()
         try:
             spec1 = self._createspec('1', ["123 - 111"])
             spec2 = self._createspec('2', ["1234 - 111"])
@@ -157,13 +170,14 @@ class BlackBox(unittest.TestCase):
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[1234], 1)
             # remove + check
+            cleanup_spec2.add(spec2)
             dbname = self._createdb(spec2, action='rm')
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[123], 1)
             self.assertEqual(ret[1234], 0)
         finally:
             self._rmdb(dbname)
-            os.remove(spec2)
+            cleanup_spec2.cleanup()
     def testDoubleAdd(self):
         dbname = None
         try:
@@ -179,25 +193,27 @@ class BlackBox(unittest.TestCase):
             self._rmdb(dbname)
     def testDoubleRemove(self):
         dbname = None
-        spec2 = None
+        cleanup_spec2 = Cleaner()
         try:
             spec1 = self._createspec('1', ["123 - 1248"])
             spec2 = self._createspec('2', ["1234 - 1248"])
             dbname = self._createdb(spec1)
             dbname = self._createdb(spec2, action='add')
+            cleanup_spec2.add(spec2)
             dbname = self._createdb(spec2, action='rm')
             self.assertRaises(AssertionError, self._createdb, spec2, action='rm')
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[123], 1)
         finally:
             self._rmdb(dbname)
-            os.remove(spec2)
+            cleanup_spec2.cleanup()
     def testInvalid(self):
         dbname = None
-        spec = None
+        cleanup_spec = Cleaner()
         try:
             speclines = ['123 0 -rwxrwxrwx 1 user group SIZE_ERROR May 13 14:27 filename']
             spec = self._createspec('1', lines=speclines)
+            cleanup_spec.add(spec)
             dbname = self.dbname_
             cmd = [BIN_, '-f', dbname, 'init', spec]
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -206,7 +222,7 @@ class BlackBox(unittest.TestCase):
             self.assertEqual(process.returncode, 1)
         finally:
             self._rmdb(dbname)
-            os.remove(spec)
+            cleanup_spec.cleanup()
 
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):
