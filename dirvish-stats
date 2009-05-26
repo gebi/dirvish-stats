@@ -103,9 +103,9 @@ def multi_open(path):
         '''Open bzip2 compressed file'''
         import bz2
         return bz2.BZ2File(filename)
-    opts = [(['.gzip', '.gz'], gzfile),
-            (['.bzip2', '.bz2'], bzfile),
-            ([''], open)
+    opts = [([''], open),
+            (['.gzip', '.gz'], gzfile),
+            (['.bzip2', '.bz2'], bzfile)
            ]
     for (endings, fun) in opts:
         for ending in endings:
