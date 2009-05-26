@@ -268,7 +268,7 @@ def action_dump(opts, _args):
     '''dump - Dump human readable form of db-file (inode refcount)'''
     db = gdbm.open(opts.dbfile, 'rf')
     key = db.firstkey()
-    while key != None:
+    while key is not None:
         print "%s %s" % (key, db[key])
         key = db.nextkey(key)
 
