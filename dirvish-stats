@@ -200,7 +200,7 @@ def create_db(db, dir):
                 stat_size += size
             else:
                 stat_size_new += size
-        except:
+        except KeyError:
             db[inode] = "1"
             stat_size_new += size
     print_stat(dir, stat_size, stat_size_new)
