@@ -252,15 +252,15 @@ class MultiOpen(unittest.TestCase):
     def multi_open(self, filename):
         self.assertEqual(self.teststring_, ds.multi_open(self.wd(filename)).readlines()[0])
     def testGzip(self):
-        self.multi_open('gz/foo')
-        self.multi_open('gzip/foo')
+        self.multi_open('gz/foo.gz')
+        self.multi_open('gzip/foo.gzip')
     def testBzip2(self):
-        self.multi_open('bz2/foo')
-        self.multi_open('bzip2/foo')
+        self.multi_open('bz2/foo.bz2')
+        self.multi_open('bzip2/foo.bzip2')
     def testPlain(self):
         self.multi_open('plain/foo')
     def testFileNotFound(self):
-        self.assertRaises(RuntimeError, self.multi_open, 'nonexistent')
+        self.assertRaises(IOError, self.multi_open, 'nonexistent')
 
 if __name__ == '__main__':
     unittest.main()

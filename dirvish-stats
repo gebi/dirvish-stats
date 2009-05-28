@@ -93,8 +93,8 @@ def print_new_files(path, size, line):
     name = line.split(None, 10)[10]
     sys.stdout.write("%s %s" % (hsize, path_join(path, 'tree', name)))
 
-def multi_open(path):
-    '''Trie to open a possible compressed file based on fileending'''
+def multi_open(file):
+    '''Open a possible compressed file based on fileending'''
     def gzfile(filename):
         '''Open gzip compressed file'''
         import gzip
@@ -103,30 +103,41 @@ def multi_open(path):
         '''Open bzip2 compressed file'''
         import bz2
         return bz2.BZ2File(filename)
-    opts = [([''], open),
-            (['.gzip', '.gz'], gzfile),
-            (['.bzip2', '.bz2'], bzfile)
-           ]
-    for (endings, fun) in opts:
-        for ending in endings:
-            file_name = path+ending
-            if os.path.exists(file_name):
-                return fun(file_name)
-    raise RuntimeError('No index files found: %s' %os.path.abspath(path))
+    ending = ""
+    opts = {'':open,
+            'gzip':gzfile, 'gz':gzfile,
+            'bzip2':bzfile, 'bz2':bzfile}
+    try:
+        ending = file.rsplit('.', 1)[1]
+    except IndexError:
+        pass
+    if ending in opts:
+        return opts.get(ending)(file)
+    else:
+        raise RuntimeError('Unsupported index compression type %s in %s' % (ending, os.path.abspath(file)))
 
 def open_dirvish_index(file_or_dir):
-    '''Open possible compressed dirvish index file'''
+    '''Open dirvish index file
+        link - realpath(link), same as below
+        file - type == fileending (.gz=gzip, .bz2=bzip2, ...)
+        dir  - Probe names (index.gz, index.bz2, ...)
+    '''
     path = file_or_dir
     if os.path.islink(file_or_dir):
-        realpath = os.path.realpath(file_or_dir)
-        if os.path.isdir(realpath):
-            path = realpath
-    elif os.path.isdir(file_or_dir):
-        path = path_join(file_or_dir, 'index')
-    try:
-        return multi_open(path)
-    except RuntimeError, e:
-        die(str(e))
+        path = os.path.realpath(file_or_dir)
+    file = path
+    if os.path.isdir(path):
+        # search for index.*
+        index = ""
+        for i in ".gzip .gz .bzip2 .bz2".split():
+            possible_index = os.path.join(path, 'index' + i)
+            if os.path.exists(possible_index):
+                index = possible_index
+                continue
+        if index == "":
+            raise RuntimeError('No index file found in: %s' %os.path.abspath(path))
+        file = index
+    return multi_open(file)
 
 def get_db_index_name(db_name):
     '''Get name of our index file from db filename'''
