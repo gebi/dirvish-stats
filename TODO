@@ -3,3 +3,11 @@
 
 # speedup
 - benchmark batch return from parse_index:yield (return 10 or more lines as list)
+- dump pythons internal bzip2/gz file objects as they are PAIN SLOW!
+    they are about 10 times slower than spawning bzip2/gz directly and reading from the pipe
+    %time ~/my-projects/dirvish-stats/dirvish-stats init index
+        ~/my-projects/dirvish-stats/dirvish-stats init index  5.14s user 1.34s system 99% cpu 6.502 total
+    % time gunzip -c index.gz | ~/my-projects/dirvish-stats/dirvish-stats init /dev/stdin
+        gunzip -c index.gz  0.23s user 0.03s system 6% cpu 3.855 total
+        ~/my-projects/dirvish-stats/dirvish-stats init /dev/stdin  1.87s user 1.32s system 82% cpu 3.862 total
+
