@@ -1,5 +1,6 @@
 - should links really go into the db?
 - maybe plain files only?
+- sqlite backend
 
 # speedup
 - benchmark batch return from parse_index:yield (return 10 or more lines as list)
