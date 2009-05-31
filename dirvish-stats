@@ -125,6 +125,8 @@ def open_dirvish_index(file_or_dir):
     path = file_or_dir
     if os.path.islink(file_or_dir):
         path = os.path.realpath(file_or_dir)
+        if not os.path.exists(path):
+            path = file_or_dir
     file = path
     if os.path.isdir(path):
         # search for index.*
