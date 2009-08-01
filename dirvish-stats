@@ -46,7 +46,7 @@ def path_join(a, *p):
     return path
 
 def parse_index(fd):
-    '''Prases the output of find -ls for inode, type and size'''
+    '''Parses the output of find -ls for inode, type and size'''
     line_num = 0
     for i in fd:
         line_num += 1
