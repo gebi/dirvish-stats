@@ -1,0 +1,3 @@
+[submodule "lib/tc"]
+	path = lib/tc
+	url = git://github.com/gebi/tc.git
