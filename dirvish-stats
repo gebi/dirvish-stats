@@ -97,12 +97,14 @@ def multi_open(file):
     '''Open a possible compressed file based on fileending'''
     def gzfile(filename):
         '''Open gzip compressed file'''
-        import gzip
-        return gzip.GzipFile(filename)
+        import subprocess
+        proc = subprocess.Popen(['gzip', '--decompress', '--stdout', filename], stdout=subprocess.PIPE)
+        return proc.stdout
     def bzfile(filename):
         '''Open bzip2 compressed file'''
-        import bz2
-        return bz2.BZ2File(filename)
+        import subprocess
+        proc = subprocess.Popen(['bzip2', '--decompress', '--stdout', filename], stdout=subprocess.PIPE)
+        return proc.stdout
     ending = ""
     opts = {'':open,
             'gzip':gzfile, 'gz':gzfile,
