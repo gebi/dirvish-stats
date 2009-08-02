@@ -190,6 +190,8 @@ class Gdbm(CommonDB):
         try:
             refcnt = int(self.db[inode])
             refcnt += 1
+            if refcnt <= 0:
+                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(self.dbfile)))
         except KeyError:
             pass
         self.db[inode] = str(refcnt)
@@ -279,12 +281,8 @@ def create_db(db, dir):
         refcnt = db.increment(inode)
         if refcnt == 1:
             stat_size_new += size
-        elif refcnt > 1:
-            stat_size += size
         else:
-            # database error
-            db.set(inode, 1)
-            stat_size_new += size
+            stat_size += size
     print_stat(dir, stat_size, stat_size_new)
 
 def action_rm(opts, args):
