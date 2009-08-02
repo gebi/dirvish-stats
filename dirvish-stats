@@ -10,7 +10,7 @@ import os
 import sys
 import optparse
 import inspect
-import gdbm
+import struct
 
 CONFIG_ = None
 
@@ -164,20 +164,149 @@ def write_db_index(db_name, db_set):
     fd.close()
 
 
+class CommonDB(object):
+    def get(self, inode):
+        pass
+    def set(self, inode, refcnt):
+        pass
+    def increment(self, inode):
+        pass
+    def decrement(self, inode):
+        pass
+    def close(self):
+        pass
+
+def die_corrupt_db(dbfile, inode, refcnt=None):
+    if refcnt is None:
+        die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(dbfile)))
+    else:
+        die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(dbfile)))
+
+class Gdbm(object):
+    flags_ = {'NEW':'nf',
+              'APPEND':'cf',
+              'READ': 'rf' }
+    def __init__(self, type, file, flag):
+        import gdbm
+        self.db = gdbm.open(file, self.flags_[flag])
+        self.dbfile = file
+    def get(self, inode):
+        return int(self.db[inode])
+    def set(self, inode, refcnt):
+        self.db[inode] = str(refcnt)
+    def increment(self, inode):
+        refcnt = 1
+        try:
+            refcnt = int(self.db[inode])
+            refcnt += 1
+            if refcnt <= 0:
+                die_corrupt_db(self.dbfile, inode, refcnt)
+        except KeyError:
+            pass
+        self.db[inode] = str(refcnt)
+        return refcnt
+    def decrement(self, inode):
+        try:
+            refcnt = int(self.db[inode])
+            if refcnt > 0:
+                refcnt -= 1
+                self.db[inode] = str(refcnt)
+                return refcnt
+            else:
+                die_corrupt_db(self.dbfile, inode, refcnt)
+        except KeyError:
+            die_corrupt_db(self.dbfile, inode)
+    def iteritems(self):
+        key = self.db.firstkey()
+        while key != None:
+            yield(key, self.db[key])
+            key = self.db.nextkey(key)
+    def close(self):
+        self.db.close()
+
+class DBtc(object):
+    def __init__(self, type, file, flag):
+        import tc
+        self.flags_ = {'tch':{ 'NEW'    : tc.HDBOCREAT|tc.HDBTDEFLATE,
+                               'APPEND' : tc.HDBTDEFLATE,
+                               'READ'   : tc.HDBOREADER,
+                               '_create': tc.HDB },
+                       'tcb':{ 'NEW'    : tc.BDBOCREAT|tc.BDBTDEFLATE,
+                               'APPEND' : tc.BDBTDEFLATE,
+                               'READ'   : tc.BDBOREADER,
+                               '_create': tc.BDB }}
+        self.db = self.flags_[type]['_create']()
+        self.db.open(file, self.flags_[type][flag])
+        self.dbfile = file
+    def get(self, inode):
+        return struct.unpack('i', self.db.get(inode))[0]
+    def set(self, inode, refcnt):
+        self.db.put(inode, struct.pack('i', refcnt))
+    def increment(self, inode):
+        refcnt = self.db.addint(inode, 1)
+        if refcnt <= 0:
+            die_corrupt_db(self.dbfile, inode, refcnt)
+        return refcnt
+    def decrement(self, inode):
+        refcnt = self.db.addint(inode, -1)
+        if refcnt == 0:
+            self.db.out(inode)
+        elif refcnt < 0:
+            die_corrupt_db(self.dbfile, inode, refcnt)
+    def iteritems(self):
+        return self.db.iteritems()
+    def close(self):
+        self.db.close()
+
+class Sqlite(object):
+    def __init__(self, file, flags=None):
+        import sqlite3
+        self.db = sqlite3.connect(file)
+        self.db.execute("PRAGMA synchronous = OFF") # unuseable slow otherwise
+    def init(self):
+        self.db.execute("create table mapping (inode integer primary key, refcnt integer default 1)")
+    def add(self, inode):
+        self.db.execute("insert into mapping(inode) values(?)", (inode,))
+    def get(self, inode):
+        cur = self.db.execute("select (refcnt) from mapping where inode=?", (inode,))
+        return cur.fetchone()[0]
+    def increment(self, inode):
+        self.db.execute("update mapping set refcnt = refcnt+1 where inode=?", (inode,))
+    def decrement(self, inode):
+        self.db.execute("update mapping set refcnt = refcnt-1 where inode=? and refcnt >0", (inode,))
+    def close(self):
+        self.db.commit()
+
+def db_open(filename, flag):
+    '''flag = [ NEW, APPEND, READ ]'''
+    ending = ""
+    opts = {'gdbm':Gdbm,
+            'tch':DBtc,
+            'tcb':DBtc }
+    try:
+        ending = filename.rsplit('.', 1)[1]
+    except IndexError:
+        pass
+    if ending in opts:
+        return opts.get(ending)(ending, filename, flag)
+    else:
+        raise RuntimeError("Unsupported database type %s in %s" % (ending, os.path.abspath(filename)))
+
+
 # ACTIONS
 def action_init(opts, args):
     '''init - Initialise db-FILE with given directories'''
     fd = open(get_db_index_name(opts.dbfile),'w+')
     fd.close()
-    add_to_db(opts, args, 'nf')     # always create a _new_ db
+    add_to_db(opts, args, 'NEW')     # always create a _new_ db
 
 def action_add(opts, args):
     '''add - Add directories to db-file'''
-    add_to_db(opts, args, 'cf')     # open an existing db
+    add_to_db(opts, args, 'APPEND')     # open an existing db
 
 def add_to_db(opts, args, db_flags):
     '''Backend function for action_init/action_add'''
-    db = gdbm.open(opts.dbfile, db_flags)
+    db = db_open(opts.dbfile, db_flags)
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir in db_index:
@@ -197,21 +326,16 @@ def create_db(db, dir):
         if type == 'd':
             stat_size_new += size
             continue
-        try:
-            refcnt = int(db[inode])
-            db[inode] = str(refcnt+1)
-            if refcnt != 0:
-                stat_size += size
-            else:
-                stat_size_new += size
-        except KeyError:
-            db[inode] = "1"
+        refcnt = db.increment(inode)
+        if refcnt == 1:
             stat_size_new += size
+        else:
+            stat_size += size
     print_stat(dir, stat_size, stat_size_new)
 
 def action_rm(opts, args):
     '''rm - Remove directories from db-file'''
-    db = gdbm.open(opts.dbfile, 'wf')
+    db = db_open(opts.dbfile, 'APPEND')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir not in db_index:
@@ -231,23 +355,16 @@ def remove_from_db(db, dir):
         if type == 'd':
             stat_size_new += size
             continue
-        try:
-            refcnt = int(db[inode])
-            if refcnt > 0:
-                db[inode] = str(refcnt-1)
-                if refcnt == 1:
-                    stat_size_new += size
-                else:
-                    stat_size += size
-            else:
-                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" % (refcnt, inode, os.path.abspath(opts.dbfile)))
-        except KeyError:
-            die("wrong or corrupted db (inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
+        refcnt = db.decrement(inode)
+        if refcnt == 1:
+            stat_size_new += size
+        else:
+            stat_size += size
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
     '''stat - Print statistics of given directories using db-file'''
-    db = gdbm.open(opts.dbfile, 'rf')
+    db = db_open(opts.dbfile, 'READ')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir not in db_index:
@@ -266,26 +383,24 @@ def create_stats(db, dir, verbose=False):
             stat_size_new += size
             continue
         try:
-            refcnt = db[inode]
-            if refcnt == "1":
+            refcnt = db.get(inode)
+            if refcnt == 1:
                 stat_size_new += size
                 if verbose:
                     print_new_files(dir, size, line)
                 continue
-            elif refcnt == "0":
-                die("wrong or corrupted db (refcnt=0;inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
+            elif refcnt == 0:
+                die_corrupt_db(opts.dbfile, inode, 0)
             stat_size += size
         except KeyError:
-            die("wrong or corrupted db (inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
+            die_corrupt_db(opts.dbfile, inode)
     print_stat(dir, stat_size, stat_size_new)
 
 def action_dump(opts, _args):
     '''dump - Dump human readable form of db-file (inode refcount)'''
-    db = gdbm.open(opts.dbfile, 'rf')
-    key = db.firstkey()
-    while key is not None:
-        print "%s %s" % (key, db[key])
-        key = db.nextkey(key)
+    db = db_open(opts.dbfile, 'READ')
+    for (key, value) in db.iteritems():
+        print "%s %s" % (key, value)
 
 
 # MAIN
