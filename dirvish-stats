@@ -10,7 +10,7 @@ import os
 import sys
 import optparse
 import inspect
-import gdbm
+import struct
 
 CONFIG_ = None
 
@@ -174,11 +174,12 @@ class CommonDB(object):
     def close(self):
         pass
 
-class Gdbm(CommonDB):
+class Gdbm(object):
     flags_ = {'NEW':'nf',
               'APPEND':'cf',
               'READ': 'rf' }
     def __init__(self, type, file, flag):
+        import gdbm
         self.db = gdbm.open(file, self.flags_[flag])
         self.dbfile = file
     def get(self, inode):
@@ -215,7 +216,41 @@ class Gdbm(CommonDB):
     def close(self):
         self.db.close()
 
-class Sqlite(CommonDB):
+class DBtc(object):
+    def __init__(self, type, file, flag):
+        import tc
+        self.flags_ = {'tch':{ 'NEW'    : tc.HDBOCREAT|tc.HDBTDEFLATE,
+                               'APPEND' : tc.HDBTDEFLATE,
+                               'READ'   : tc.HDBOREADER,
+                               '_create': tc.HDB },
+                       'tcb':{ 'NEW'    : tc.BDBOCREAT|tc.BDBTDEFLATE,
+                               'APPEND' : tc.BDBTDEFLATE,
+                               'READ'   : tc.BDBOREADER,
+                               '_create': tc.BDB }}
+        self.db = self.flags_[type]['_create']()
+        self.db.open(file, self.flags_[type][flag])
+        self.dbfile = file
+    def get(self, inode):
+        return struct.unpack('i', self.db.get(inode))[0]
+    def set(self, inode, refcnt):
+        self.db.put(inode, struct.pack('i', refcnt))
+    def increment(self, inode):
+        refcnt = self.db.addint(inode, 1)
+        if refcnt <= 0:
+            die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(self.dbfile)))
+        return refcnt
+    def decrement(self, inode):
+        refcnt = self.db.addint(inode, -1)
+        if refcnt == 0:
+            self.db.out(inode)
+        elif refcnt < 0:
+            die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(self.dbfile)))
+    def iteritems(self):
+        return self.db.iteritems()
+    def close(self):
+        self.db.close()
+
+class Sqlite(object):
     def __init__(self, file, flags=None):
         import sqlite3
         self.db = sqlite3.connect(file)
@@ -245,7 +280,7 @@ def db_open(filename, flag):
     except IndexError:
         pass
     if ending in opts:
-        return opts.get(ending)(type, filename, flag)
+        return opts.get(ending)(ending, filename, flag)
     else:
         raise RuntimeError("Unsupported database type %s in %s" % (ending, os.path.abspath(filename)))
 
