@@ -287,7 +287,7 @@ def create_db(db, dir):
 
 def action_rm(opts, args):
     '''rm - Remove directories from db-file'''
-    db = gdbm.open(opts.dbfile, 'wf')
+    db = db_open(opts.dbfile, 'APPEND')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir not in db_index:
@@ -307,23 +307,16 @@ def remove_from_db(db, dir):
         if type == 'd':
             stat_size_new += size
             continue
-        try:
-            refcnt = int(db[inode])
-            if refcnt > 0:
-                db[inode] = str(refcnt-1)
-                if refcnt == 1:
-                    stat_size_new += size
-                else:
-                    stat_size += size
-            else:
-                die("wrong or corrupted db (refcnt=%d;inode=%s): %s" % (refcnt, inode, os.path.abspath(opts.dbfile)))
-        except KeyError:
-            die("wrong or corrupted db (inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
+        refcnt = db.decrement(inode)
+        if refcnt == 1:
+            stat_size_new += size
+        else:
+            stat_size += size
     print_stat(dir, stat_size, stat_size_new)
 
 def action_stat(opts, args):
     '''stat - Print statistics of given directories using db-file'''
-    db = gdbm.open(opts.dbfile, 'rf')
+    db = db_open(opts.dbfile, 'READ')
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir not in db_index:
@@ -342,13 +335,13 @@ def create_stats(db, dir, verbose=False):
             stat_size_new += size
             continue
         try:
-            refcnt = db[inode]
-            if refcnt == "1":
+            refcnt = db.get(inode)
+            if refcnt == 1:
                 stat_size_new += size
                 if verbose:
                     print_new_files(dir, size, line)
                 continue
-            elif refcnt == "0":
+            elif refcnt == 0:
                 die("wrong or corrupted db (refcnt=0;inode=%s): %s" % (inode, os.path.abspath(opts.dbfile)))
             stat_size += size
         except KeyError:
