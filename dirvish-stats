@@ -175,8 +175,11 @@ class CommonDB(object):
         pass
 
 class Gdbm(CommonDB):
-    def __init__(self, file, flags):
-        self.db = gdbm.open(file, flags)
+    flags_ = {'NEW':'nf',
+              'APPEND':'cf',
+              'READ': 'rf' }
+    def __init__(self, type, file, flag):
+        self.db = gdbm.open(file, self.flags_[flag])
         self.dbfile = file
     def get(self, inode):
         return int(self.db[inode])
@@ -224,21 +227,36 @@ class Sqlite(CommonDB):
     def close(self):
         self.db.commit()
 
+def db_open(filename, flag):
+    '''flag = [ NEW, APPEND, READ ]'''
+    ending = ""
+    opts = {'gdbm':Gdbm,
+            'tch':DBtc,
+            'tcb':DBtc }
+    try:
+        ending = filename.rsplit('.', 1)[1]
+    except IndexError:
+        pass
+    if ending in opts:
+        return opts.get(ending)(type, filename, flag)
+    else:
+        raise RuntimeError("Unsupported database type %s in %s" % (ending, os.path.abspath(filename)))
+
 
 # ACTIONS
 def action_init(opts, args):
     '''init - Initialise db-FILE with given directories'''
     fd = open(get_db_index_name(opts.dbfile),'w+')
     fd.close()
-    add_to_db(opts, args, 'nf')     # always create a _new_ db
+    add_to_db(opts, args, 'NEW')     # always create a _new_ db
 
 def action_add(opts, args):
     '''add - Add directories to db-file'''
-    add_to_db(opts, args, 'cf')     # open an existing db
+    add_to_db(opts, args, 'APPEND')     # open an existing db
 
 def add_to_db(opts, args, db_flags):
     '''Backend function for action_init/action_add'''
-    db = gdbm.open(opts.dbfile, db_flags)
+    db = db_open(opts.dbfile, db_flags)
     db_index = read_db_index(opts.dbfile)
     for dir in args:
         if dir in db_index:
@@ -258,15 +276,14 @@ def create_db(db, dir):
         if type == 'd':
             stat_size_new += size
             continue
-        try:
-            refcnt = int(db[inode])
-            db[inode] = str(refcnt+1)
-            if refcnt != 0:
-                stat_size += size
-            else:
-                stat_size_new += size
-        except KeyError:
-            db[inode] = "1"
+        refcnt = db.increment(inode)
+        if refcnt == 1:
+            stat_size_new += size
+        elif refcnt > 1:
+            stat_size += size
+        else:
+            # database error
+            db.set(inode, 1)
             stat_size_new += size
     print_stat(dir, stat_size, stat_size_new)
 
