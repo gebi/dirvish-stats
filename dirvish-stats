@@ -163,9 +163,9 @@ def write_db_index(db_name, db_set):
 
 
 class CommonDB(object):
-    #def put(self, inode, refcnt):
-    #    pass
     def get(self, inode):
+        pass
+    def set(self, inode, refcnt):
         pass
     def increment(self, inode):
         pass
@@ -180,6 +180,8 @@ class Gdbm(CommonDB):
         self.dbfile = file
     def get(self, inode):
         return int(self.db[inode])
+    def set(self, inode, refcnt):
+        self.db[inode] = str(refcnt)
     def increment(self, inode):
         refcnt = 1
         try:
