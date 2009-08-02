@@ -190,7 +190,7 @@ class Gdbm(CommonDB):
         except KeyError:
             pass
         self.db[inode] = str(refcnt)
-        return recnt
+        return refcnt
     def decrement(self, inode):
         try:
             refcnt = int(self.db[inode])
