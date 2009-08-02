@@ -254,7 +254,8 @@ class DBtc(object):
         elif refcnt < 0:
             die_corrupt_db(self.dbfile, inode, refcnt)
     def iteritems(self):
-        return self.db.iteritems()
+        for (key, value) in self.db.iteritems():
+            yield(key, struct.unpack('i', value)[0])
     def close(self):
         self.db.close()
 
