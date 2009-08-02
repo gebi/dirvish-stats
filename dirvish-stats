@@ -207,6 +207,11 @@ class Gdbm(CommonDB):
                 die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt,inode,os.path.abspath(self.dbfile)))
         except KeyError:
             die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(self.dbfile)))
+    def iteritems(self):
+        key = self.db.firstkey()
+        while key != None:
+            yield(key, self.db[key])
+            key = self.db.nextkey(key)
     def close(self):
         self.db.close()
 
@@ -350,11 +355,9 @@ def create_stats(db, dir, verbose=False):
 
 def action_dump(opts, _args):
     '''dump - Dump human readable form of db-file (inode refcount)'''
-    db = gdbm.open(opts.dbfile, 'rf')
-    key = db.firstkey()
-    while key is not None:
-        print "%s %s" % (key, db[key])
-        key = db.nextkey(key)
+    db = db_open(opts.dbfile, 'READ')
+    for (key, value) in db.iteritems():
+        print "%s %s" % (key, value)
 
 
 # MAIN
