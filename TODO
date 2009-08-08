@@ -1,14 +1,22 @@
+- unittests for all backends
 - should links really go into the db?
 - maybe plain files only?
-- sqlite backend
+! sqlite backend (dropped, too slow, would need merge from sql2003)
 
 # speedup
 - benchmark batch return from parse_index:yield (return 10 or more lines as list)
-- dump pythons internal bzip2/gz file objects as they are PAIN SLOW!
+X dump pythons internal bzip2/gz file objects as they are PAIN SLOW!
     they are about 10 times slower than spawning bzip2/gz directly and reading from the pipe
+    note: only tested on dual and quadcore as i don't have access do single core anymore
     %time ~/my-projects/dirvish-stats/dirvish-stats init index
         ~/my-projects/dirvish-stats/dirvish-stats init index  5.14s user 1.34s system 99% cpu 6.502 total
     % time gunzip -c index.gz | ~/my-projects/dirvish-stats/dirvish-stats init /dev/stdin
         gunzip -c index.gz  0.23s user 0.03s system 6% cpu 3.855 total
         ~/my-projects/dirvish-stats/dirvish-stats init /dev/stdin  1.87s user 1.32s system 82% cpu 3.862 total
-
+X implement tokyocabinet backend (nearly 5times faster than gdbm)
+    dirvish-stats init -f default.gdbm -h  160.59s user 100.32s system  78% cpu 5:32.88 total
+    dirvish-stats init -f default.tch -h    99.97s user   1.93s system 128% cpu 1:19.40 total
+    dirvish-stats init -f default.tcb -h   106.69s user   3.20s system 129% cpu 1:24.76 total
+    34M   - default.gdbm
+    11M   - default.tch
+     6.5M - default.tcb
