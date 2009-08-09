@@ -172,12 +172,17 @@ def write_db_index(db_name, db_set):
 #    def close(self):
 
 def die_corrupt_db(dbfile, inode, refcnt=None):
+    '''Unified error reporting function in case of db corruption'''
     if refcnt is None:
         die("wrong or corrupted db (inode=%s): %s" %(inode, os.path.abspath(dbfile)))
     else:
         die("wrong or corrupted db (refcnt=%d;inode=%s): %s" %(refcnt, inode, os.path.abspath(dbfile)))
 
 class Gdbm(object):
+    '''GDBM db backend
+        All types in GDBM are stored as strings, and converted to integers in all i/o functions
+        Key/Value pairs are not deleted but simply set to 0 and ignored on iteritems!
+    '''
     flags_ = {'NEW':'nf',
               'APPEND':'cf',
               'READ': 'rf' }
@@ -186,10 +191,13 @@ class Gdbm(object):
         self.db = gdbm.open(file, self.flags_[flag])
         self.dbfile = file
     def get(self, inode):
+        '''Get integer refcount of inode from db'''
         return int(self.db[inode])
     def set(self, inode, refcnt):
+        '''Set integer refcount of inode from db'''
         self.db[inode] = str(refcnt)
     def increment(self, inode):
+        '''Increment recount of inode by one'''
         refcnt = 1
         try:
             refcnt = int(self.db[inode])
@@ -201,6 +209,7 @@ class Gdbm(object):
         self.db[inode] = str(refcnt)
         return refcnt
     def decrement(self, inode):
+        '''Decrement recount of inode by one'''
         try:
             refcnt = int(self.db[inode])
             if refcnt > 0:
@@ -212,6 +221,7 @@ class Gdbm(object):
         except KeyError:
             die_corrupt_db(self.dbfile, inode)
     def iteritems(self):
+        '''Get all key/values from db one by one'''
         key = self.db.firstkey()
         while key != None:
             value = self.db[key]
@@ -219,9 +229,13 @@ class Gdbm(object):
                 yield(key, self.db[key])
             key = self.db.nextkey(key)
     def close(self):
+        '''Close db'''
         self.db.close()
 
 class DBtc(object):
+    '''Tokyocabinet DB backend
+        Keys(inodes) are strings, values(refcounts) are machine dependend integers.
+    '''
     def __init__(self, type, file, flag):
         import tc
         self.flags_ = {'tch':{ 'NEW'    : tc.HDBOCREAT|tc.HDBTDEFLATE,
@@ -237,21 +251,28 @@ class DBtc(object):
         self.dbfile = file
         self.type = type
     def get(self, inode):
+        '''Get machine dependend integer refcount of inode from db and convert it to real integer'''
         return struct.unpack('i', self.db.get(inode))[0]
     def set(self, inode, refcnt):
+        '''Convert refcnt to machine dependend integer and write it to db'''
         self.db.put(inode, struct.pack('i', refcnt))
     def increment(self, inode):
+        '''Use special tokyocabinet addint method to add 1 to inode'''
         refcnt = self.db.addint(inode, 1)
         if refcnt <= 0:
             die_corrupt_db(self.dbfile, inode, refcnt)
         return refcnt
     def decrement(self, inode):
+        '''Use special tokyocabinet addint method to subtract 1 from inode
+            remove record if refcnt == 0
+        '''
         refcnt = self.db.addint(inode, -1)
         if refcnt == 0:
             self.db.out(inode)
         elif refcnt < 0:
             die_corrupt_db(self.dbfile, inode, refcnt)
     def iteritems(self):
+        '''Get all key/values from db one by one and convert refcnt to python integers'''
         try:
             for (key, value) in self.db.iteritems():
                 yield(key, struct.unpack('i', value)[0])
@@ -260,6 +281,7 @@ class DBtc(object):
             if self.type != 'tcb':
                 raise e
     def close(self):
+        '''Close db'''
         self.db.close()
 
 def db_open(filename, flag):
