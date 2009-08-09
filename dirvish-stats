@@ -262,25 +262,6 @@ class DBtc(object):
     def close(self):
         self.db.close()
 
-class Sqlite(object):
-    def __init__(self, file, flags=None):
-        import sqlite3
-        self.db = sqlite3.connect(file)
-        self.db.execute("PRAGMA synchronous = OFF") # unuseable slow otherwise
-    def init(self):
-        self.db.execute("create table mapping (inode integer primary key, refcnt integer default 1)")
-    def add(self, inode):
-        self.db.execute("insert into mapping(inode) values(?)", (inode,))
-    def get(self, inode):
-        cur = self.db.execute("select (refcnt) from mapping where inode=?", (inode,))
-        return cur.fetchone()[0]
-    def increment(self, inode):
-        self.db.execute("update mapping set refcnt = refcnt+1 where inode=?", (inode,))
-    def decrement(self, inode):
-        self.db.execute("update mapping set refcnt = refcnt-1 where inode=? and refcnt >0", (inode,))
-    def close(self):
-        self.db.commit()
-
 def db_open(filename, flag):
     '''flag = [ NEW, APPEND, READ ]'''
     ending = ""
