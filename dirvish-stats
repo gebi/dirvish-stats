@@ -219,7 +219,9 @@ class Gdbm(object):
     def iteritems(self):
         key = self.db.firstkey()
         while key != None:
-            yield(key, self.db[key])
+            value = self.db[key]
+            if value != "0":
+                yield(key, self.db[key])
             key = self.db.nextkey(key)
     def close(self):
         self.db.close()

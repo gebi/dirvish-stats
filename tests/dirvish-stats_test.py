@@ -176,7 +176,7 @@ class BlackBox(unittest.TestCase):
             dbname = self._createdb(spec2, action='rm')
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[123], 1)
-            self.assertEqual(ret[1234], 0)
+            self.assertEqual(ret.has_key(1234), False)
         finally:
             self._rmdb(dbname)
             cleanup_spec2.cleanup()
