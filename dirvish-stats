@@ -164,17 +164,12 @@ def write_db_index(db_name, db_set):
     fd.close()
 
 
-class CommonDB(object):
-    def get(self, inode):
-        pass
-    def set(self, inode, refcnt):
-        pass
-    def increment(self, inode):
-        pass
-    def decrement(self, inode):
-        pass
-    def close(self):
-        pass
+#class CommonDB(object):
+#    def get(self, inode):
+#    def set(self, inode, refcnt):
+#    def increment(self, inode):
+#    def decrement(self, inode):
+#    def close(self):
 
 def die_corrupt_db(dbfile, inode, refcnt=None):
     if refcnt is None:
@@ -240,6 +235,7 @@ class DBtc(object):
         self.db = self.flags_[type]['_create']()
         self.db.open(file, self.flags_[type][flag])
         self.dbfile = file
+        self.type = type
     def get(self, inode):
         return struct.unpack('i', self.db.get(inode))[0]
     def set(self, inode, refcnt):
@@ -256,8 +252,13 @@ class DBtc(object):
         elif refcnt < 0:
             die_corrupt_db(self.dbfile, inode, refcnt)
     def iteritems(self):
-        for (key, value) in self.db.iteritems():
-            yield(key, struct.unpack('i', value)[0])
+        try:
+            for (key, value) in self.db.iteritems():
+                yield(key, struct.unpack('i', value)[0])
+        except KeyError, e:
+            # FIXME: empty tokyocabinet b-tree db gives KeyError in iteritems()
+            if self.type != 'tcb':
+                raise e
     def close(self):
         self.db.close()
 

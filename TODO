@@ -1,7 +1,7 @@
-- unittests for all backends
 - should links really go into the db?
 - maybe plain files only?
 ! sqlite backend (dropped, too slow, would need merge from sql2003)
+X unittests for all backends
 
 # speedup
 - benchmark batch return from parse_index:yield (return 10 or more lines as list)

@@ -111,6 +111,7 @@ class BlackBox(unittest.TestCase):
     def _dumpdb(self, dbname):
         (out, err) = subprocess.Popen([BIN_, 'dump', '-f', dbname], stdout=subprocess.PIPE,
                                                                     stderr=subprocess.PIPE).communicate()
+        #assert(err, '')
         self.assertEqual(err, '')
         ret = {}
         for i in out.split('\n'):
@@ -129,60 +130,81 @@ class BlackBox(unittest.TestCase):
             assert file.startswith(self.tmp_)
             os.remove(file)
         os.remove(dbname+'.i')
+    def for_all_dbtypes(self, method):
+        dbtypes = "gdbm tch tcb".split()
+        dbnames = [ self._wd("external_action."+i) for i in dbtypes ]
+        dbresults = []
+        for dbname in dbnames:
+            self.dbname_ = dbname
+            try:
+                method()
+            finally:
+                dbresults.append(self._dumpdb(dbname))
+                self._rmdb(self.dbname_)
+        #crosscheck dbs
+        numresults = len(dbresults[0])
+        for i in dbresults[1:]:
+            self.assertEqual(numresults, len(i))
+        ref = dbresults[0]
+        for db in dbresults[1:]:
+            for (k,v) in db.items():
+                self.assertEqual(ref[k], v)
 
     def testInitDB(self):
-        dbname = None
-        try:
+        def doit():
             spec = self._createspec('1', ["123 - 1248", "123 - 4182", "1234 - 111"])
             dbname = self._createdb(spec)
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[123], 2)
             self.assertEqual(ret[1234], 1)
-        finally:
-            self._rmdb(dbname)
+        self.for_all_dbtypes(doit)
     def testAdd(self):
-        dbname = None
-        try:
+        def doit():
             spec1 = self._createspec('1', ["123 - 1248"])
             spec2 = self._createspec('2', ["123 - 4182"])
             dbname = self._createdb(spec1)
             dbname = self._createdb(spec2, action='add')
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[123], 2)
-        finally:
-            self._rmdb(dbname)
+        self.for_all_dbtypes(doit)
+    def testEmptyDB(self):
+        def doit():
+            spec = self._createspec('1', ["1234 - 111"])
+            dbname = self._createdb(spec)
+            dbname = self._createdb(spec, action="rm")
+            ret = self._dumpdb(dbname)
+            self.assertEqual(ret.has_key(1234), False)
+            os.remove(spec)
+        self.for_all_dbtypes(doit)
     def testAddDirectory(self):
-        dbname = None
-        try:
+        def doit():
             spec = self._createspec('1', ["1234 d 111"])
             dbname = self._createdb(spec)
             ret = self._dumpdb(dbname)
             self.assertEqual(ret.has_key(1234), False)
-        finally:
-            self._rmdb(dbname)
+        self.for_all_dbtypes(doit)
     def testRemove(self):
-        dbname = None
-        cleanup_spec2 = Cleaner()
-        try:
-            spec1 = self._createspec('1', ["123 - 111"])
-            spec2 = self._createspec('2', ["1234 - 111"])
-            # add + check
-            dbname = self._createdb(spec1)
-            dbname = self._createdb(spec2, action='add')
-            ret = self._dumpdb(dbname)
-            self.assertEqual(ret[1234], 1)
-            # remove + check
-            cleanup_spec2.add(spec2)
-            dbname = self._createdb(spec2, action='rm')
-            ret = self._dumpdb(dbname)
-            self.assertEqual(ret[123], 1)
-            self.assertEqual(ret.has_key(1234), False)
-        finally:
-            self._rmdb(dbname)
-            cleanup_spec2.cleanup()
+        def doit():
+            cleanup_spec2 = Cleaner()
+            try:
+                spec1 = self._createspec('1', ["123 - 111"])
+                spec2 = self._createspec('2', ["1234 - 111"])
+                # add + check
+                dbname = self._createdb(spec1)
+                dbname = self._createdb(spec2, action='add')
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret[1234], 1)
+                # remove + check
+                cleanup_spec2.add(spec2)
+                dbname = self._createdb(spec2, action='rm')
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret[123], 1)
+                self.assertEqual(ret.has_key(1234), False)
+            finally:
+                cleanup_spec2.cleanup()
+        self.for_all_dbtypes(doit)
     def testDoubleAdd(self):
-        dbname = None
-        try:
+        def doit():
             spec1 = self._createspec('1', ["123 - 1248"])
             spec2 = self._createspec('2', ["1234 - 1248"])
             dbname = self._createdb(spec1)
@@ -191,40 +213,62 @@ class BlackBox(unittest.TestCase):
             ret = self._dumpdb(dbname)
             self.assertEqual(ret[123], 1)
             self.assertEqual(ret[1234], 1)
-        finally:
-            self._rmdb(dbname)
+        self.for_all_dbtypes(doit)
     def testDoubleRemove(self):
-        dbname = None
-        cleanup_spec2 = Cleaner()
-        try:
-            spec1 = self._createspec('1', ["123 - 1248"])
-            spec2 = self._createspec('2', ["1234 - 1248"])
-            dbname = self._createdb(spec1)
-            dbname = self._createdb(spec2, action='add')
-            cleanup_spec2.add(spec2)
-            dbname = self._createdb(spec2, action='rm')
-            self.assertRaises(AssertionError, self._createdb, spec2, action='rm')
-            ret = self._dumpdb(dbname)
-            self.assertEqual(ret[123], 1)
-        finally:
-            self._rmdb(dbname)
-            cleanup_spec2.cleanup()
+        def doit():
+            cleanup_spec2 = Cleaner()
+            try:
+                spec1 = self._createspec('1', ["123 - 1248"])
+                spec2 = self._createspec('2', ["1234 - 1248"])
+                dbname = self._createdb(spec1)
+                dbname = self._createdb(spec2, action='add')
+                cleanup_spec2.add(spec2)
+                dbname = self._createdb(spec2, action='rm')
+                self.assertRaises(AssertionError, self._createdb, spec2, action='rm')
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret[123], 1)
+            finally:
+                cleanup_spec2.cleanup()
+        self.for_all_dbtypes(doit)
+    def testIncDecCornerCase(self):
+        def doit():
+            cleanup_spec2 = Cleaner()
+            try:
+                spec1 = self._createspec('1', ["123 - 1248"])
+                spec2 = self._createspec('2', ["123 - 1248"])
+                dbname = self._createdb(spec1)
+                dbname = self._createdb(spec2, action='add')
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret[123], 2)
+                dbname = self._createdb(spec1, action='rm')
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret[123], 1)
+                dbname = self._createdb(spec2, action='rm')
+                cleanup_spec2.add(spec2)
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret.has_key(123), False)
+                dbname = self._createdb(spec1, action='add')
+                ret = self._dumpdb(dbname)
+                self.assertEqual(ret[123], 1)
+            finally:
+                cleanup_spec2.cleanup()
+        self.for_all_dbtypes(doit)
     def testInvalid(self):
-        dbname = None
-        cleanup_spec = Cleaner()
-        try:
-            speclines = ['123 0 -rwxrwxrwx 1 user group SIZE_ERROR May 13 14:27 filename']
-            spec = self._createspec('1', lines=speclines)
-            cleanup_spec.add(spec)
-            dbname = self.dbname_
-            cmd = [BIN_, '-f', dbname, 'init', spec]
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
-            (out, err) = process.communicate()
-            self.assertEqual(process.returncode, 1)
-        finally:
-            self._rmdb(dbname)
-            cleanup_spec.cleanup()
+        def doit():
+            cleanup_spec = Cleaner()
+            try:
+                speclines = ['123 0 -rwxrwxrwx 1 user group SIZE_ERROR May 13 14:27 filename']
+                spec = self._createspec('1', lines=speclines)
+                cleanup_spec.add(spec)
+                dbname = self.dbname_
+                cmd = [BIN_, '-f', dbname, 'init', spec]
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE)
+                (out, err) = process.communicate()
+                self.assertEqual(process.returncode, 1)
+            finally:
+                cleanup_spec.cleanup()
+        self.for_all_dbtypes(doit)
 
 class HumanSizes(unittest.TestCase):
     def testFirstCornerCase(self):
