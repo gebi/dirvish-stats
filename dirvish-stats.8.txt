@@ -28,6 +28,10 @@ It also requires you to enable the index feature in dirvish (compressed either w
 REQUIREMENTS
 ------------
 You need to have python-gdbm installed and index generation enabled in dirvish for the particular vaults.
+It is highly recommend to 'NOT use gdbm' backend but instead 'use Tokyocabinet tch' as it is about 5 times faster and resulting database files are only one third in size.
+
+Tch is the hash based backend and the fastest supported backend in dirvish-stats.
+Tcb is the b-tree based backend and a bit slower than tch but produces database files nearly half the size of tch.
 
 ACTIONS
 -------

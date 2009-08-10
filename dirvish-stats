@@ -431,6 +431,8 @@ if __name__ == "__main__":
             "%prog is a program which helps determining\n" +\
             "\tused diskspace from hardlinked dirvish backups\n\n" +\
             "ACTIONS:\n" + '\n'.join(docstrings)
+    usage = usage+'\n' +\
+            '\nSupported datebases: gdbm, tch, tcb'
     parser = optparse.OptionParser(usage, conflict_handler="resolve")
     parser.add_option("-f", "--dbfile", dest="dbfile", default="default.gdbm",
             metavar="FILE", help="Name of database file (%default)")
