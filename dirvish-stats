@@ -122,7 +122,7 @@ def multi_open(file):
     if ending in opts:
         return opts.get(ending)(file)
     else:
-        raise RuntimeError('Unsupported index compression type %s in %s' % (ending, os.path.abspath(file)))
+        raise RuntimeError('Unsupported index compression type \'%s\' in %s' % (ending, os.path.abspath(file)))
 
 def open_dirvish_index(file_or_dir):
     '''Open dirvish index file
@@ -303,7 +303,7 @@ def db_open(filename, flag):
     if ending in opts:
         return opts.get(ending)(ending, filename, flag)
     else:
-        raise RuntimeError("Unsupported database type %s in %s" % (ending, os.path.abspath(filename)))
+        raise RuntimeError("Unsupported database type \'%s\' in %s" % (ending, os.path.abspath(filename)))
 
 
 # ACTIONS
