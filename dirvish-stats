@@ -14,6 +14,12 @@ import struct
 
 CONFIG_ = None
 
+# make GeneratorExit work in python2.4
+try:
+    GeneratorExit
+except NameError:
+    class GeneratorExit(Exception): pass
+
 def die(msg, parser=None):
     '''Print error message to stderr and exit'''
     sys.stderr.write("Error: "+msg+"\n")
