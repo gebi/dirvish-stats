@@ -9,6 +9,7 @@ import subprocess
 import StringIO
 
 BIN_='./dirvish_stats.py'
+DBTYPES="gdbm tch tcb".split()
 
 class ParseIndex(unittest.TestCase):
     def _parse(self, line):
@@ -131,8 +132,7 @@ class BlackBox(unittest.TestCase):
             os.remove(file)
         os.remove(dbname+'.i')
     def for_all_dbtypes(self, method):
-        dbtypes = "gdbm tch tcb".split()
-        dbnames = [ self._wd("external_action."+i) for i in dbtypes ]
+        dbnames = [ self._wd("external_action."+i) for i in DBTYPES ]
         dbresults = []
         for dbname in dbnames:
             self.dbname_ = dbname
@@ -307,4 +307,10 @@ class MultiOpen(unittest.TestCase):
         self.assertRaises(IOError, self.multi_open, 'nonexistent')
 
 if __name__ == '__main__':
+    dbtypes = os.getenv('DBTYPES')
+    if dbtypes != None:
+        DBTYPES=dbtypes.split()
+        if len(DBTYPES) == 0:
+            DBTYPES=['gdbm']
+    print "Running unittests for the following database backends:", ', '.join(DBTYPES)
     unittest.main()
