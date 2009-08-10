@@ -1,0 +1,22 @@
+HINTS
+-----
+
+It is _really_ recommend to use the tokyocabinet backend and NOT gdbm.
+
+INSTALL INSTRUCTIONS
+--------------------
+git clone git://github.com/gebi/dirvish-stats.git
+cd dirvish-stats
+# for tokyocabinet backend you need the tc python module
+# it's distributed as submodule and tested with this version
+git submodule update --init
+cd lib/tc
+python setup.py build
+python setup.py install
+
+REQUIRED SOFTWARE
+-----------------
+python 2.4 works, >=2.5 recommend
+python-gdbm
+# for tokyocabinet
+libtokyocabinet-dev
