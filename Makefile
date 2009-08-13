@@ -1,3 +1,5 @@
+PYTHON ?= python
+
 %.html : %.txt ;
 	asciidoc -b xhtml11 $^
 
@@ -14,10 +16,10 @@ doc_html: $(addsuffix .html, $(MANPAGES))
 doc_man: $(addsuffix .gz, $(MANPAGES))
 
 test:
-	cd tests && python dirvish-stats_test.py
+	cd tests && ${PYTHON} dirvish-stats_test.py
 
 testv:
-	cd tests && python dirvish-stats_test.py -v
+	cd tests && ${PYTHON} dirvish-stats_test.py -v
 
 check:
 	pylint --include-ids=y --max-line-length=120 --disable-msg=W0621,W0622,C0103 \
