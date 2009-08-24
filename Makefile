@@ -1,5 +1,5 @@
 PYTHON ?= python
-PYLINT_IGNORE = "W0603,W0621,W0622,C0103"
+PYLINT_IGNORE = "W0603,W0621,W06022,C0103"
 
 %.html : %.txt ;
 	asciidoc -b xhtml11 $^
@@ -23,6 +23,12 @@ testv:
 	cd tests && ${PYTHON} dirvish-stats_test.py -v
 
 check:
+	@echo "Ignoring the folloing messages:"
+	@echo "    W0603 - Using global statement"
+	@echo "    W0621 - Redefining variable from outer scope"
+	@echo "    W0622 - Redefining built-in"
+	@echo "    C0103 - Invalid name, (should match [a-z_][a-z0-9_]{2,30}$$)"
+	@echo
 	pylint --include-ids=y --max-line-length=120 --disable-msg=${PYLINT_IGNORE} \
 		--reports=no dirvish-stats 2>/dev/null || true
 	@pylint --include-ids=y --max-line-length=120 --disable-msg=${PYLINT_IGNORE} \
