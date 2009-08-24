@@ -2,6 +2,8 @@ HINTS
 -----
 
 It is _really_ recommend to use the tokyocabinet backend and NOT gdbm.
+Gdbm is _pain_ slow, tokyocabinet is about 5 times faster and resulting db
+files are about 1/3 in size.
 
 INSTALL INSTRUCTIONS
 --------------------
