@@ -1,4 +1,5 @@
 PYTHON ?= python
+PYLINT_IGNORE = "W0603,W0621,W0622,C0103"
 
 %.html : %.txt ;
 	asciidoc -b xhtml11 $^
@@ -22,9 +23,9 @@ testv:
 	cd tests && ${PYTHON} dirvish-stats_test.py -v
 
 check:
-	pylint --include-ids=y --max-line-length=120 --disable-msg=W0621,W0622,C0103 \
+	pylint --include-ids=y --max-line-length=120 --disable-msg=${PYLINT_IGNORE} \
 		--reports=no dirvish-stats 2>/dev/null || true
-	@pylint --include-ids=y --max-line-length=120 --disable-msg=W0621,W0622,C0103 \
+	@pylint --include-ids=y --max-line-length=120 --disable-msg=${PYLINT_IGNORE} \
 		dirvish-stats 2>/dev/null |tail -n5
 
 clean:
