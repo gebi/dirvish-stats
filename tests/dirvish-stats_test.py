@@ -306,6 +306,55 @@ class MultiOpen(unittest.TestCase):
     def testFileNotFound(self):
         self.assertRaises(IOError, self.multi_open, 'nonexistent')
 
+class IndexWarning(unittest.TestCase):
+    def setUp(self):
+        try:
+            if os.path.isdir(self.tmp_):
+                shutil.rmtree(self.tmp_)
+        except AttributeError:
+            pass
+        self.tmp_ = tempfile.mkdtemp(prefix='dirvish-stats_test_')
+        self.dbname_ = os.path.join(self.tmp_, 'external_action.gdbm')
+    def tearDown(self):
+        os.rmdir(self.tmp_)
+    def to_test(self):
+        return 'index_warning'
+    def run_dirvish(self, action, spec, cleanup=True):
+        cmd = [BIN_, '-f', self.dbname_, action, spec]
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
+        (out, err) = proc.communicate()
+        self.assert_(proc.returncode != 0, 'wrong returncode, got %d, should >=1' % proc.returncode)
+        if cleanup:
+            os.remove(self.dbname_)
+            os.remove(self.dbname_+".i")
+        return (out, err)
+    def testInit(self):
+        (out, err) = self.run_dirvish('init', self.to_test())
+        self.assertEqual(out, '')
+        self.assert_(err.startswith('Warning: No index file found in: '), "response: \"%s\"" %err)
+    def testAdd(self):
+        self.run_dirvish('init', self.to_test(), cleanup=False)
+        (out, err) = self.run_dirvish('add', self.to_test())
+        self.assertEqual(out, '')
+        self.assert_(err.startswith('Warning: No index file found in: '), "response: \"%s\"" %err)
+    def testRm(self):
+        self.run_dirvish('init', self.to_test(), cleanup=False)
+        index = open(self.dbname_+".i", 'w')
+        index.write(self.to_test() + '\n')
+        index.close()
+        (out, err) = self.run_dirvish('rm', self.to_test())
+        self.assertEqual(out, '')
+        self.assert_(err.startswith('Warning: No index file found in: '), "response: \"%s\"" %err)
+    def testStat(self):
+        self.run_dirvish('init', self.to_test(), cleanup=False)
+        index = open(self.dbname_+".i", 'w')
+        index.write(self.to_test() + '\n')
+        index.close()
+        (out, err) = self.run_dirvish('stat', self.to_test())
+        self.assertEqual(out, '')
+        self.assert_(err.startswith('Warning: No index file found in: '), "response: \"%s\"" %err)
+
 if __name__ == '__main__':
     dbtypes = os.getenv('DBTYPES')
     if dbtypes != None:

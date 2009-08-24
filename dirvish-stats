@@ -13,6 +13,7 @@ import inspect
 import struct
 
 CONFIG_ = None
+RET_VAL_= 0
 
 # make GeneratorExit work in python2.4
 try:
@@ -29,7 +30,12 @@ def die(msg, parser=None):
 
 def warn(msg):
     '''Print warning message to stderr'''
-    sys.stderr.write("Error: "+msg+"\n")
+    sys.stderr.write("Warning: "+msg+"\n")
+
+def error_happend():
+    '''Log a error'''
+    global RET_VAL_
+    RET_VAL_ += 1
 
 class ParsingError(Exception):
     '''Parsing error Exception'''
@@ -325,14 +331,19 @@ def add_to_db(opts, args, db_flags):
         if dir in db_index:
             warn("%s already in db %s" % (dir, os.path.abspath(opts.dbfile)))
             continue
+        try:
+            index_fd = open_dirvish_index(dir)
+        except RuntimeError, e:
+            warn(e.message)
+            error_happend()
+            continue
         db_index.add(dir)
-        create_db(db, dir)
+        create_db(db, dir, index_fd)
     write_db_index(opts.dbfile, db_index)
     db.close()
 
-def create_db(db, dir):
-    '''Parse one dirvish index file from dir and _add_ it to db'''
-    file = open_dirvish_index(dir)
+def create_db(db, dir, file):
+    '''Parse one dirvish index file from index_fd and _add_ it to db'''
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, _line) in parse_index(file):
@@ -354,14 +365,20 @@ def action_rm(opts, args):
         if dir not in db_index:
             warn("%s not in db-index" %dir)
             continue
+        try:
+            index_fd = open_dirvish_index(dir)
+        except RuntimeError, e:
+            warn(e.message)
+            warn("Possible Database corruption, due to missing index file")
+            error_happend()
+            continue
         db_index.remove(dir)
-        remove_from_db(db, dir)
+        remove_from_db(db, dir, index_fd)
     write_db_index(opts.dbfile, db_index)
     db.close()
 
-def remove_from_db(db, dir):
+def remove_from_db(db, dir, file):
     '''Parse one dirvish index file from dir and _remove_ it to db'''
-    file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, _line) in parse_index(file):
@@ -383,12 +400,18 @@ def action_stat(opts, args):
         if dir not in db_index:
             warn("%s not in db-index" %dir)
             continue
-        create_stats(db, dir, opts.verbose)
+        try:
+            index_fd = open_dirvish_index(dir)
+        except RuntimeError, e:
+            warn(e.message)
+            warn("Possible Database corruption, due to missing index file")
+            error_happend()
+            continue
+        create_stats(db, dir, index_fd, opts.verbose)
     db.close()
 
-def create_stats(db, dir, verbose=False):
+def create_stats(db, dir, file, verbose=False):
     '''Parse one dirvish index file from dir and output statistics'''
-    file = open_dirvish_index(dir)
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, line) in parse_index(file):
@@ -455,4 +478,5 @@ if __name__ == "__main__":
         actions[cmd](opts, args)
     else:
         parser.error("no such action: " + cmd)
+    sys.exit(RET_VAL_)
 
