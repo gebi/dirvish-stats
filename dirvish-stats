@@ -19,7 +19,9 @@ RET_VAL_= 0
 try:
     GeneratorExit
 except NameError:
-    class GeneratorExit(Exception): pass
+    class GeneratorExit(Exception):
+        '''GeneratorExit stub for python 2.4'''
+        pass
 
 def die(msg, parser=None):
     '''Print error message to stderr and exit'''
