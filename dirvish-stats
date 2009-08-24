@@ -223,7 +223,7 @@ class Gdbm(object):
         self.db[inode] = str(refcnt)
         return refcnt
     def decrement(self, inode):
-        '''Decrement recount of inode by one'''
+        '''Decrement refcount of inode by one'''
         try:
             refcnt = int(self.db[inode])
             if refcnt > 0:
@@ -235,7 +235,7 @@ class Gdbm(object):
         except KeyError:
             die_corrupt_db(self.dbfile, inode)
     def iteritems(self):
-        '''Get all key/values from db one by one'''
+        '''Get all key/value pairs from db one by one'''
         key = self.db.firstkey()
         while key != None:
             value = self.db[key]
