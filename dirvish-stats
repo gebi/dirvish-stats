@@ -13,7 +13,7 @@ import inspect
 import struct
 
 CONFIG_ = None
-RET_VAL_= 0
+RET_VAL_ = 0
 
 # make GeneratorExit work in python2.4
 try:
