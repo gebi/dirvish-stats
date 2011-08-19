@@ -16,7 +16,7 @@ libtokyocabinet-dev
 SUPPORTED PLATTFORMS
 --------------------
 
-tested on: python2.4, python2.5, python2.6, pypy1.6
+tested on: python2.4, python2.5, python2.6, pypy1.5, pypy1.6
 
 systems tested:
     - Debian Linux from lenny to unstable
