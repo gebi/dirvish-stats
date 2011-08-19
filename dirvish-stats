@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Filename:      dirvish-stats
 # Purpose:       Helps determining used diskspace from hardlinked dirvish backups
-# Authors:       (c) Michael Gebetsroither <gebi@grml.org>
+# Authors:       (c) Michael Gebetsroither <michael@mgeb.org>
 # License:       This file is licensed under the GPL v2.
 ################################################################################
 '''Helps determining used diskspace from hardlinked dirvish backups'''
