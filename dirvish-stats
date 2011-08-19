@@ -251,7 +251,10 @@ class DBtc(object):
         Keys(inodes) are strings, values(refcounts) are machine dependend integers.
     '''
     def __init__(self, type, file, flag):
-        import tc
+        try:
+            import tc
+        except ImportError:
+            import pytc as tc
         self.flags_ = {'tch':{ 'NEW'    : tc.HDBOCREAT|tc.HDBTDEFLATE,
                                'APPEND' : tc.HDBTDEFLATE,
                                'READ'   : tc.HDBOREADER,
