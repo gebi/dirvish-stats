@@ -1,0 +1,28 @@
+#!/bin/bash
+
+PYTHONS_="python pypy python2.4 python2.5 python2.6 pypy1.6"
+
+failed_=""
+not_found_=""
+for i in $PYTHONS_; do
+    echo "### $i"
+    if ! $i -c 'import sys'; then
+        not_found_="$i $not_found_"
+        continue
+    fi
+    if [[ $i == "python" || $i == "pypy" ]]; then
+        echo -n "Version: "
+        $i -c "import sys; print ' | '.join([ i.strip() for i in sys.version.split('\n')])"
+    fi
+
+    PYTHON=$i make test || failed_="$i $failed_"
+done
+
+if [[ $not_found_ != "" ]]; then
+    echo "Error - Tests not executed on: $not_found_" >&2
+    exit 1
+fi
+if [[ $failed_ != "" ]]; then
+    echo "Error - Tests failed on: $failed_" >&2
+    exit 1
+fi
