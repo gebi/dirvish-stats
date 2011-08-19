@@ -25,10 +25,9 @@ python setup.py install
 REQUIRED SOFTWARE
 -----------------
 
-tested on: python2.4, python2.5, python2.6, pypy1.6
 pypy >= 1.6 or python >= 2.5 recommend
 python-gdbm
 python-pytc
 
-# for tokyocabinet (lib/tc)
+# if you need the embedded tokyocabinet library (lib/tc)
 libtokyocabinet-dev
