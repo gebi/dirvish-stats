@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PYTHONS_="python pypy python2.4 python2.5 python2.6 pypy1.6"
 
