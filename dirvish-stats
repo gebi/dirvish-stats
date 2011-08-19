@@ -336,7 +336,7 @@ def add_to_db(opts, args, db_flags):
         try:
             index_fd = open_dirvish_index(dir)
         except RuntimeError, e:
-            warn(e.message)
+            warn(str(e))
             error_happend()
             continue
         db_index.add(dir)
@@ -370,7 +370,7 @@ def action_rm(opts, args):
         try:
             index_fd = open_dirvish_index(dir)
         except RuntimeError, e:
-            warn(e.message)
+            warn(str(e))
             warn("Possible Database corruption, due to missing index file")
             error_happend()
             continue
@@ -405,7 +405,7 @@ def action_stat(opts, args):
         try:
             index_fd = open_dirvish_index(dir)
         except RuntimeError, e:
-            warn(e.message)
+            warn(str(e))
             warn("Possible Database corruption, due to missing index file")
             error_happend()
             continue
