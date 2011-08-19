@@ -383,7 +383,7 @@ def action_rm(opts, args):
     db.close()
 
 def remove_from_db(db, dir, file):
-    '''Parse one dirvish index file from dir and _remove_ it to db'''
+    '''Parse one dirvish index file from dir and _remove_ it from db'''
     stat_size = 0
     stat_size_new = 0
     for (inode, type, size, _line) in parse_index(file):
