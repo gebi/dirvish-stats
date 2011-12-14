@@ -5,7 +5,7 @@ dirvish-stats is a program which helps determining
 REQUIRED SOFTWARE
 -----------------
 
-pypy >= 1.6 or python >= 2.5 recommend
+pypy >= 1.5 or python >= 2.5 recommend
 python-gdbm
 python-pytc
 
@@ -16,7 +16,7 @@ libtokyocabinet-dev
 SUPPORTED PLATTFORMS
 --------------------
 
-tested on: python2.4, python2.5, python2.6, pypy1.5, pypy1.6
+tested on: python2.4, python2.5, python2.6, pypy1.5, pypy1.6, pypy1.7
 
 systems tested:
     - Debian Linux from lenny to unstable
